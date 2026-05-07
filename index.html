@@ -79,7 +79,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#006D77;
   <div class="card-h"><span>🔗</span><h2>GitHub 自動上傳（產生可分享連結）</h2></div>
   <div class="card-b">
     <div style="font-size:12px;color:#6B7280;background:#EDF6F7;border:1px solid #83C5BE;border-radius:8px;padding:10px 14px;margin-bottom:12px">
-      設定後，派送問卷時自動上傳到 GitHub，委員直接用連結開啟，不需下載檔案。
+      設定後，派送問卷時自動上傳到 GitHub，委員直接用連結開啟，不需下載檔案。<br><span style="color:#C0392B;font-weight:700">⚠️ Token 僅供管理者測試使用，請勿公開分享或截圖。</span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
       <div>
@@ -88,7 +88,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#006D77;
       </div>
       <div>
         <label style="font-size:12px;font-weight:700;color:#004E56;display:block;margin-bottom:4px">Repo（owner/repo）</label>
-        <input type="text" id="gh-repo" placeholder="cancercenter-star/cancer-survey" style="width:100%;padding:7px 10px;border:1.5px solid #D1D5DB;border-radius:6px;font-size:13px">
+        <input type="text" id="gh-repo" placeholder="cancercenter-star/cancer" value="cancercenter-star/cancer" style="width:100%;padding:7px 10px;border:1.5px solid #D1D5DB;border-radius:6px;font-size:13px">
       </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -534,8 +534,12 @@ function mkHTML(member,ids){
         "var _presetMember='"+member.replace(/'/g,"\\'")+"';var _bakedGroups = "+JSON.stringify(filtered)+";");
 
       // Download
-      var dt=new Date().toISOString().slice(5,10).replace("-","月")+"日";
-      var fname="survey_"+member.replace(/[^a-zA-Z一-鿿0-9]/g,"_")+"_"+dt+".html";
+      var dt=new Date().toISOString().slice(0,10).replace(/-/g,"");
+      var safeName=member.replace(/[^a-zA-Z0-9]/g,function(ch){
+        // Transliterate common Chinese names to pinyin initials or use hex
+        return encodeURIComponent(ch).replace(/%/g,'');
+      }).substring(0,20)||"member";
+      var fname="survey_"+safeName+"_"+dt+".html";
 
       // Try GitHub upload first; fallback to download
       if (GH.token && GH.repo) {
@@ -706,42 +710,75 @@ function loadGHSettings() {
 }
 
 function ghUpload(filename, htmlContent, onSuccess, onFail) {
-  if (!GH.token || !GH.repo) { onFail("未設定 GitHub Token"); return; }
-  var encoded = btoa(unescape(encodeURIComponent(htmlContent)));
-  var url = "https://api.github.com/repos/"+GH.repo+"/contents/surveys/"+filename;
-  
-  // First check if file exists (to get its SHA for update)
-  fetch(url, {
-    headers: {"Authorization":"token "+GH.token, "Accept":"application/vnd.github.v3+json"}
-  }).then(function(r){ return r.json(); })
+  if (!GH.token || !GH.repo) { onFail("未設定 GitHub Token 或 Repo"); return; }
+
+  // Step 1: base64 encode (chunked, handles large files)
+  var encoded;
+  try {
+    var bytes = new TextEncoder().encode(htmlContent);
+    var bin = '';
+    bytes.forEach(function(b){ bin += String.fromCharCode(b); });
+    var result = '';
+    for (var i = 0; i < bin.length; i += 8192) {
+      result += btoa(bin.slice(i, i + 8192));
+    }
+    encoded = result;
+  } catch(e) {
+    onFail("base64 編碼失敗: " + e.message); return;
+  }
+
+  var apiUrl = "https://api.github.com/repos/" + GH.repo + "/contents/surveys/" + filename;
+  var pagesUrl = "https://" + GH.repo.split("/")[0] + ".github.io/" + GH.repo.split("/")[1] + "/surveys/" + filename;
+
+  // Step 2: GET existing file SHA (needed for update)
+  fetch(apiUrl, {
+    headers: {
+      "Authorization": "Bearer " + GH.token,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    }
+  })
+  .then(function(r) {
+    if (r.status === 401) throw new Error("Token 無效或已過期，請重新設定");
+    if (r.status === 403) throw new Error("Token 權限不足，需要 repo 權限");
+    if (r.status === 404) return null; // new file
+    return r.json();
+  })
   .then(function(existing) {
     var body = {
-      message: "Add survey: "+filename,
+      message: "Create survey for " + filename.replace(/survey_|\.html/g,'').replace(/_/g,' '),
       content: encoded,
       branch: "main"
     };
-    if (existing.sha) body.sha = existing.sha; // update existing
-    return fetch(url, {
+    if (existing && existing.sha) body.sha = existing.sha;
+
+    return fetch(apiUrl, {
       method: "PUT",
       headers: {
-        "Authorization": "token "+GH.token,
+        "Authorization": "Bearer " + GH.token,
+        "Accept": "application/vnd.github+json",
         "Content-Type": "application/json",
-        "Accept": "application/vnd.github.v3+json"
+        "X-GitHub-Api-Version": "2022-11-28"
       },
       body: JSON.stringify(body)
     });
   })
-  .then(function(r){ return r.json(); })
+  .then(function(r) {
+    if (!r.ok) {
+      return r.json().then(function(j){
+        throw new Error("GitHub API " + r.status + ": " + (j.message || "上傳失敗"));
+      });
+    }
+    return r.json();
+  })
   .then(function(result) {
-    if (result.content && result.content.html_url) {
-      // Convert github.com URL to github.io URL
-      var rawUrl = "https://"+GH.repo.split("/")[0]+".github.io/"+GH.repo.split("/")[1]+"/surveys/"+filename;
-      onSuccess(rawUrl);
+    if (result.content) {
+      onSuccess(pagesUrl);
     } else {
-      onFail(result.message || "上傳失敗");
+      onFail("上傳回應異常: " + JSON.stringify(result).substring(0,100));
     }
   })
-  .catch(function(e){ onFail(e.message); });
+  .catch(function(e) { onFail(e.message); });
 }
 
 function procSheet(wb,sn){
