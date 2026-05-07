@@ -709,23 +709,24 @@ function loadGHSettings() {
   if (GH.repo)  document.getElementById("gh-repo").value  = GH.repo;
 }
 
+function safeBase64Encode(str) {
+  var bytes = new TextEncoder().encode(str);
+  var binary = '';
+  var chunk = 8192;
+  for (var i = 0; i < bytes.length; i += chunk) {
+    var slice = bytes.subarray(i, i + chunk);
+    slice.forEach(function(b){ binary += String.fromCharCode(b); });
+  }
+  return btoa(binary);
+}
+
 function ghUpload(filename, htmlContent, onSuccess, onFail) {
   if (!GH.token || !GH.repo) { onFail("未設定 GitHub Token 或 Repo"); return; }
 
-  // Step 1: base64 encode (chunked, handles large files)
+  // Step 1: safe UTF-8 base64 encode
   var encoded;
-  try {
-    var bytes = new TextEncoder().encode(htmlContent);
-    var bin = '';
-    bytes.forEach(function(b){ bin += String.fromCharCode(b); });
-    var result = '';
-    for (var i = 0; i < bin.length; i += 8192) {
-      result += btoa(bin.slice(i, i + 8192));
-    }
-    encoded = result;
-  } catch(e) {
-    onFail("base64 編碼失敗: " + e.message); return;
-  }
+  try { encoded = safeBase64Encode(htmlContent); }
+  catch(e) { onFail("base64 編碼失敗: " + e.message); return; }
 
   var apiUrl = "https://api.github.com/repos/" + GH.repo + "/contents/surveys/" + filename;
   var pagesUrl = "https://" + GH.repo.split("/")[0] + ".github.io/" + GH.repo.split("/")[1] + "/surveys/" + filename;
