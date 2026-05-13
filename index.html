@@ -528,10 +528,10 @@ function mkHTML(member,ids,meetingLinksArg){
       var _ml = {};
       filtered.forEach(function(g) {
         var gid = String(g.id || "").toLowerCase().trim();
+        var url = meetingLinks[gid];
+        if (!url) return;
         g.indicators.forEach(function(ind) {
-          var url = meetingLinks[gid]                         // q1, m1, m2...
-                 || meetingLinks["c:" + (ind.cancer||"").trim()]; // c:乳癌, c:口腔癌...
-          if (url) _ml[ind.id] = url;
+          _ml[ind.id] = url;
         });
       });
 
@@ -683,28 +683,20 @@ function renderMeetingLinks() {
     h += "</div>";
   });
 
-  // ── 醫療 M1–M8：依癌別（M1–M8 共用）──
-  h += "<div style='font-weight:700;color:#004E56;font-size:13px;padding:8px 0 4px;margin-top:12px'>醫療 M1–M8（依癌別，各組共用）</div>";
-  // Fixed cancer list (M1–M8 shared, from screenshot)
-  var fixedCancers = ["口腔癌", "鼻咽癌", "口咽癌", "下咽癌", "喉癌", "甲狀腺癌", "乳癌", "小細胞癌", "非小細胞肺癌", "食道癌", "胃癌", "淋巴癌", "惡性淋巴癌", "大腸癌", "結直腸癌", "胰臟癌", "膽管癌", "肝癌", "攝護腺癌", "膀胱癌", "子宮頸癌", "卵巢癌", "子宮體癌"];
-  // Also collect any extra cancers from GROUPS not in fixed list
-  var extraSeen = {}; fixedCancers.forEach(function(c){ extraSeen[c]=true; });
-  GROUPS.forEach(function(g) {
-    if (g.type !== "medical") return;
-    g.indicators.forEach(function(ind) {
-      var cn = (ind.cancer || "").trim();
-      if (cn && !extraSeen[cn]) { extraSeen[cn] = true; fixedCancers.push(cn); }
-    });
-  });
-  var cancers = fixedCancers;
-
-  cancers.forEach(function(cn) {
-    var key = "c:" + cn;
-    var val = ml[key] || MEETING_LINKS[key] || "";
-    if (!val) return; // skip rows with no link
+  // ── 醫療 M1–M8：每組一個 ──
+  h += "<div style='font-weight:700;color:#004E56;font-size:13px;padding:8px 0 4px;margin-top:12px'>醫療 M1–M8（每組一個）</div>";
+  var medRows = [
+    {id:"m1",name:"M1 診斷期遵行率"},{id:"m2",name:"M2 治療期遵循率"},
+    {id:"m3",name:"M3 治療計畫書完整率"},{id:"m4",name:"M4 非動態核心指標"},
+    {id:"m5",name:"M5 動態核心指標"},{id:"m6",name:"M6 個案失聯率"},
+    {id:"m7",name:"M7 留治率"},{id:"m8",name:"M8 完治率"}
+  ];
+  medRows.forEach(function(row) {
+    var val = ml[row.id] || "";
     h += "<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #F3F4F6'>";
-    h += "<span style='font-size:12px;color:#374151;width:200px;flex-shrink:0'>" + cn + "</span>";
-    h += "<input type='text' data-key='" + key + "' value='" + val.replace(/'/g,"&#39;") + "' placeholder='Google Drive 連結…' style='flex:1;padding:4px 8px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px;font-family:inherit'>";
+    h += "<span style='font-size:12px;font-weight:700;color:#006D77;width:44px;flex-shrink:0'>" + row.id.toUpperCase() + "</span>";
+    h += "<span style='font-size:12px;color:#374151;width:200px;flex-shrink:0'>" + row.name + "</span>";
+    h += "<input type='text' data-key='" + row.id + "' value='" + val.replace(/'/g,"&#39;") + "' placeholder='Google Drive 連結…' style='flex:1;padding:4px 8px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px;font-family:inherit'>";
     if (val) h += "<a href='" + val + "' target='_blank' style='color:#006D77;font-size:12px;white-space:nowrap;text-decoration:none'>🔗</a>";
     h += "</div>";
   });
