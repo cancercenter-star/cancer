@@ -464,20 +464,7 @@ function doGen(){
   ids.forEach(function(id){asgn[id]=member;});
   localStorage.setItem("adm_asgn",JSON.stringify(asgn));
   var _ml={};
-  try{
-    // Read from both keys (saveMeetingLinks saves to "meetingLinks")
-    var _ml1=JSON.parse(localStorage.getItem("meetingLinks")||"{}");
-    var _ml2=JSON.parse(localStorage.getItem("adm_meeting_links")||"{}");
-    // Convert adm_meeting_links (old format "q1||q1-1") to group keys
-    Object.keys(_ml2).forEach(function(k){
-      // "q1||q1-1" → extract gid "q1"
-      var gid = k.indexOf("||") > -1 ? k.split("||")[0] : k;
-      if(gid && !_ml1[gid]) _ml1[gid] = _ml2[k];
-    });
-    _ml = _ml1;
-  }catch(e){}
-  // Debug: log what we're passing
-  console.log("[doGen] meetingLinks keys:", Object.keys(_ml), "values sample:", Object.values(_ml)[0]||"(none)");
+  try{ _ml=JSON.parse(localStorage.getItem("meetingLinks")||"{}"); }catch(e){}
   mkHTML(member,ids,_ml);
   renderList();renderSum();
 }
@@ -521,9 +508,7 @@ function mkHTML(member,ids,meetingLinksArg){
       }
 
 
-      // Inject member name and filtered groups
-      // Inject meeting links — convert "gid||ind.id" keys → "ind.id" (indicator-level) and "gid" (group-level)
-            // Build meetingLinks map for survey: key = "gid|cancer" or "gid"
+      // Inject meeting links by group id: q1-q12, m1-m8
       var meetingLinks = meetingLinksArg || {};
       var _ml = {};
       filtered.forEach(function(g) {
@@ -546,7 +531,7 @@ function mkHTML(member,ids,meetingLinksArg){
         '<option value="">— 請選擇姓名 —<\/option>\n          '+newOpts+'\n        <\/select>'
       );
 
-      html=html.replace("var _bakedGroups = null;",
+      html=html.replace("var _bakedGroups = null; // filled by exportSurveyFile()",
         "var _presetMember='"+member.replace(/'/g,"\\'")+"';var _bakedGroups = "+JSON.stringify(filtered)+";");
 
       // Download
