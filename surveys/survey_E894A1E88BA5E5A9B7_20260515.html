@@ -262,7 +262,7 @@ const GROUPS = [{"id":"q1","name":"Q1 抗癌藥物安全組","type":"non-medical
 // STATE
 // ══════════════════════════════════════════════════════
 var MEETING_LINKS = {"m1-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-2":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}; // runtime-populated
-var _presetMember='蔡若婷';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵行率","type":"medical","total":2,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵行率－口腔癌","attr":"正","change":"","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","missed":"","t115":"90%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。 二名病人無法配合檢查與會診。 改善：已建立檢查套餐，加強宣導。"},{"id":"m1-2","no":"2","cancer":"鼻咽癌","name":"診斷期遵行率－鼻咽癌","attr":"正","change":"","t112":"90%","r112":"100%","frac112":"21/21","t113":"90%","r113":"86%","frac113":"12/14","t114":"90%","r114":"100%","frac114":"18/18","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":""}]}];
+var _presetMember='蔡若婷';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵行率","type":"medical","total":2,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵行率－口腔癌","attr":"正","change":"","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","missed":"","t115":"90%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。 二名病人無法配合檢查與會診。 改善：已建立檢查套餐，加強宣導。","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-2","no":"2","cancer":"鼻咽癌","name":"診斷期遵行率－鼻咽癌","attr":"正","change":"","t112":"90%","r112":"100%","frac112":"21/21","t113":"90%","r113":"86%","frac113":"12/14","t114":"90%","r114":"100%","frac114":"18/18","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}]}];
 var _sheetUrl = ''; // filled by exportSurveyFile()
 
 let state={name:'',role:'',currentGroup:0,groups:[],responses:{},adminLinks:{}};
@@ -431,7 +431,9 @@ function buildCard(ind){
     <div class="analysis-title">114年未達閾值分析及改善 <span style="font-size:14px;font-weight:600;color:#006D77">（團隊提供）</span></div>
     <div class="analysis-text"><span class="year-tag">${ind.missed}年</span>${ind.analysis.replace(/\n/g,'<br>')}</div>
   </div>
-  <div class="voting-section">
+  
+    ${ind.meetingUrl ? '<div style="margin:12px 22px 0;padding:10px 12px;background:#EDF6F7;border:1px solid #83C5BE;border-radius:8px;font-size:14px"><b>📎 會議紀錄：</b> <a href="'+ind.meetingUrl+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:#006D77;font-weight:800;text-decoration:underline">開啟會議紀錄</a></div>' : '<div style="margin:12px 22px 0;padding:10px 12px;background:#F9FAFB;border-radius:8px;font-size:14px;color:#9CA3AF"><b>📎 會議紀錄：</b> 未提供</div>'}
+    <div class="voting-section">
     <div class="vote-block">
       <div class="vote-question">📋 會議記錄是否討論此指標？${_cardLink ? '<a href="'+_cardLink+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="display:inline-flex;align-items:center;gap:6px;background:#006D77;color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;text-decoration:none;margin-left:8px">（點選查看會議紀錄）</a>' : ''}</div>
       <div class="vote-options">
@@ -470,6 +472,10 @@ function buildCard(ind){
     <div class="vote-comment">
       <label>💬 其他意見（選填）：</label>
       <textarea id="comment-${ind.id}" placeholder="如有補充意見或建議，請填寫於此..." onblur="saveComment('${ind.id}',this.value)"></textarea>
+    </div>
+    <div class="meeting-link-row" style="margin:8px 0 4px;font-size:13px;padding:0 4px">
+      <b>會議紀錄：</b>
+      ${(function(){ var mu=MEETING_LINKS[ind.id]||''; return mu ? '<a href="'+mu+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:#006D77;font-weight:700;text-decoration:underline">開啟會議紀錄</a>' : '<span style="color:#9CA3AF">未提供會議紀錄連結</span>'; })()}
     </div>
   </div>
 </div>`;
