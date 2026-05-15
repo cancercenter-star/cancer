@@ -463,8 +463,9 @@ function doGen(){
 
   ids.forEach(function(id){asgn[id]=member;});
   localStorage.setItem("adm_asgn",JSON.stringify(asgn));
-  var _ml={};
-  try{ _ml=JSON.parse(localStorage.getItem("meetingLinks")||"{}"); }catch(e){}
+  // Start with baked-in defaults, then overlay localStorage saves
+  var _ml = Object.assign({}, MEETING_LINKS);
+  try{ Object.assign(_ml, JSON.parse(localStorage.getItem("meetingLinks")||"{}")); }catch(e){}
   mkHTML(member,ids,_ml);
   renderList();renderSum();
 }
