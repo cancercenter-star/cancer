@@ -183,7 +183,6 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
           <option value="劉惠文">劉惠文</option>
           <option value="溫國璋">溫國璋</option>
           <option value="蔡若婷">蔡若婷</option>
-          <option value="蔡易傑">蔡易傑</option>
           <option value="李秋桂">李秋桂</option>
           <option value="李國隆">李國隆</option>
           <option value="李明憲">李明憲</option>
@@ -191,6 +190,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
           <option value="哈多吉">哈多吉</option>
           <option value="李文生">李文生</option>
           <option value="趙祖怡">趙祖怡</option>
+          <option value="蔡易杰">蔡易杰</option>
         </select>
       </div>
       <button class="btn-start" id="btn-start" onclick="startSurvey()" disabled>開始填寫 →</button>
@@ -432,7 +432,7 @@ function buildCard(ind){
     <div class="analysis-text"><span class="year-tag">${ind.missed}年</span>${ind.analysis.replace(/\n/g,'<br>')}</div>
   </div>
   
-    ${ind.meetingUrl ? '<div style="margin:12px 22px 0;padding:10px 12px;background:#EDF6F7;border:1px solid #83C5BE;border-radius:8px;font-size:14px"><b>📎 會議紀錄：</b> <a href="'+ind.meetingUrl+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:#006D77;font-weight:800;text-decoration:underline">開啟會議紀錄</a></div>' : '<div style="margin:12px 22px 0;padding:10px 12px;background:#F9FAFB;border-radius:8px;font-size:14px;color:#9CA3AF"><b>📎 會議紀錄：</b> 未提供</div>'}
+    <div class="meeting-link-block" data-ind-id="${ind.id}"></div>
     <div class="voting-section">
     <div class="vote-block">
       <div class="vote-question">📋 會議記錄是否討論此指標？</div>
