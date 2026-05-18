@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>癌症品質指標審查－醫療委員 第2組</title>
+<title>[v-checkDone] 癌症品質指標審查－醫療委員 第2組</title>
 <style>
 :root{
   --teal:#006D77;--teal-dark:#004E56;--teal-light:#83C5BE;--teal-bg:#EDF6F7;
@@ -183,7 +183,6 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
           <option value="劉惠文">劉惠文</option>
           <option value="溫國璋">溫國璋</option>
           <option value="蔡若婷">蔡若婷</option>
-          <option value="蔡易傑">蔡易傑</option>
           <option value="李秋桂">李秋桂</option>
           <option value="李國隆">李國隆</option>
           <option value="李明憲">李明憲</option>
@@ -191,6 +190,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
           <option value="哈多吉">哈多吉</option>
           <option value="李文生">李文生</option>
           <option value="趙祖怡">趙祖怡</option>
+          <option value="蔡易杰">蔡易杰</option>
         </select>
       </div>
       <button class="btn-start" id="btn-start" onclick="startSurvey()" disabled>開始填寫 →</button>
@@ -386,14 +386,6 @@ function buildCard(ind){
   const analySubs=DISAGREE_ANALY.map((t,i)=>`<button class="sub-opt" id="sub-analy-${ind.id}-${i}" onclick="selectSubOpt('${ind.id}','analy',${i},true)"><span class="sub-opt-dot"></span>${t}</button>`).join('');
   const threshSubs=DISAGREE_THRESH.map((t,i)=>`<button class="sub-opt" id="sub-thresh-${ind.id}-${i}" onclick="selectSubOpt('${ind.id}','thresh',${i},true)"><span class="sub-opt-dot"></span>${t}</button>`).join('');
 
-  var _gid=ind.id.replace(/-\d+$/,''); var _liveML={};try{_liveML=JSON.parse(localStorage.getItem('adm_meeting_links')||'{}');}catch(e){} var _gid=ind.id.replace(/-\d+$/,'').toLowerCase(); var _cancer=(ind.cancer||'').trim(); 
-  var _meetingLnk = MEETING_LINKS[_gid+'||'+ind.id] || MEETING_LINKS[ind.id] || (state.adminLinks[ind.id] || '');
-  var _meetingBtnHtml = _meetingLnk
-    ? '<a href="' + _meetingLnk + '" target="_blank" '
-      + 'style="display:inline-flex;align-items:center;gap:6px;background:#006D77;color:#fff;'
-      + 'font-size:13px;font-weight:700;padding:7px 18px;border-radius:8px;text-decoration:none;margin-left:8px">'
-      + '📎 開啟會議紀錄</a>'
-    : '';
   return `
 <div class="indicator-card" id="card-${ind.id}">
   <div class="indicator-header">
@@ -432,7 +424,7 @@ function buildCard(ind){
     <div class="analysis-text"><span class="year-tag">${ind.missed}年</span>${ind.analysis.replace(/\n/g,'<br>')}</div>
   </div>
   
-    ${ind.meetingUrl ? '<div style="margin:12px 22px 0;padding:10px 12px;background:#EDF6F7;border:1px solid #83C5BE;border-radius:8px;font-size:14px"><b>📎 會議紀錄：</b> <a href="'+ind.meetingUrl+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:#006D77;font-weight:800;text-decoration:underline">開啟會議紀錄</a></div>' : '<div style="margin:12px 22px 0;padding:10px 12px;background:#F9FAFB;border-radius:8px;font-size:14px;color:#9CA3AF"><b>📎 會議紀錄：</b> 未提供</div>'}
+    <div class="meeting-link-block" data-ind-id="${ind.id}"></div>
     <div class="voting-section">
     <div class="vote-block">
       <div class="vote-question">📋 會議記錄是否討論此指標？</div>
@@ -1076,6 +1068,18 @@ function castDiscVote(id, yes){
   state.responses[id].discussed = yes;
   checkDone(id); autosaveResponses();
 }
+function checkDone(id){
+  var r = state.responses[id] || {};
+  var card = document.getElementById('card-'+id);
+  if(!card) return;
+  var done = (r.discussed !== undefined) && (r.analyAgree !== undefined) && (r.threshAgree !== undefined);
+  if(done){
+    card.classList.add('completed');
+    var badge = card.querySelector('.completed-badge');
+    if(badge) badge.style.display='inline-flex';
+  }
+}
+
 function castMeetingVote(id, hasIt){
   var sub=document.getElementById('dsub-meeting-'+id);
   if(sub) sub.style.display = hasIt ? 'block' : 'none';
