@@ -183,6 +183,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
           <option value="劉惠文">劉惠文</option>
           <option value="溫國璋">溫國璋</option>
           <option value="蔡若婷">蔡若婷</option>
+          <option value="蔡易傑">蔡易傑</option>
           <option value="李秋桂">李秋桂</option>
           <option value="李國隆">李國隆</option>
           <option value="李明憲">李明憲</option>
@@ -190,7 +191,6 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
           <option value="哈多吉">哈多吉</option>
           <option value="李文生">李文生</option>
           <option value="趙祖怡">趙祖怡</option>
-          <option value="蔡易杰">蔡易杰</option>
         </select>
       </div>
       <button class="btn-start" id="btn-start" onclick="startSurvey()" disabled>開始填寫 →</button>
@@ -261,8 +261,8 @@ const GROUPS = [{"id":"q1","name":"Q1 抗癌藥物安全組","type":"non-medical
 // ══════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════
-var MEETING_LINKS = {"m1-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}; // runtime-populated
-var _presetMember='陳龍';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵行率","type":"medical","total":1,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵行率－口腔癌","attr":"正","change":"","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","missed":"","t115":"90%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。 二名病人無法配合檢查與會診。 改善：已建立檢查套餐，加強宣導。","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}]}];
+var MEETING_LINKS = {"m1-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-2":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}; // runtime-populated
+var _presetMember='陳龍';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵行率","type":"medical","total":2,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵行率－口腔癌","attr":"正","change":"","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","missed":"","t115":"90%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。 二名病人無法配合檢查與會診。 改善：已建立檢查套餐，加強宣導。","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-2","no":"2","cancer":"鼻咽癌","name":"診斷期遵行率－鼻咽癌","attr":"正","change":"","t112":"90%","r112":"100%","frac112":"21/21","t113":"90%","r113":"86%","frac113":"12/14","t114":"90%","r114":"100%","frac114":"18/18","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}]}];
 var _sheetUrl = ''; // filled by exportSurveyFile()
 
 let state={name:'',role:'',currentGroup:0,groups:[],responses:{},adminLinks:{}};
@@ -386,6 +386,14 @@ function buildCard(ind){
   const analySubs=DISAGREE_ANALY.map((t,i)=>`<button class="sub-opt" id="sub-analy-${ind.id}-${i}" onclick="selectSubOpt('${ind.id}','analy',${i},true)"><span class="sub-opt-dot"></span>${t}</button>`).join('');
   const threshSubs=DISAGREE_THRESH.map((t,i)=>`<button class="sub-opt" id="sub-thresh-${ind.id}-${i}" onclick="selectSubOpt('${ind.id}','thresh',${i},true)"><span class="sub-opt-dot"></span>${t}</button>`).join('');
 
+  var _gid=ind.id.replace(/-\d+$/,''); var _liveML={};try{_liveML=JSON.parse(localStorage.getItem('adm_meeting_links')||'{}');}catch(e){} var _gid=ind.id.replace(/-\d+$/,'').toLowerCase(); var _cancer=(ind.cancer||'').trim(); 
+  var _meetingLnk = MEETING_LINKS[_gid+'||'+ind.id] || MEETING_LINKS[ind.id] || (state.adminLinks[ind.id] || '');
+  var _meetingBtnHtml = _meetingLnk
+    ? '<a href="' + _meetingLnk + '" target="_blank" '
+      + 'style="display:inline-flex;align-items:center;gap:6px;background:#006D77;color:#fff;'
+      + 'font-size:13px;font-weight:700;padding:7px 18px;border-radius:8px;text-decoration:none;margin-left:8px">'
+      + '📎 開啟會議紀錄</a>'
+    : '';
   return `
 <div class="indicator-card" id="card-${ind.id}">
   <div class="indicator-header">
