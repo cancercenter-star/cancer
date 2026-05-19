@@ -1038,7 +1038,7 @@ function fetchGAS() {
   sumEl.innerHTML = "<p style='color:#C8963E;font-weight:700'>⏳ 正在從 Google Sheet 載入...</p>";
   if (listEl) listEl.innerHTML = "";
 
-  fetch("https://script.google.com/macros/s/AKfycbxrcOvBM27g1qyEmTE8td3qtHz_o3OdpHEXhtopxi0xGMRj0FS_2m-7k5i8URu3CSIs/exec?action=getAll")
+  fetch("https://script.google.com/macros/s/AKfycbxD9yZu-7OmClIusfkSVt-1m-e3b2nNJ3SY5SivRmPSzRchx08YKfaI5S3vC9v0VNdh/exec?action=getAll")
     .then(function(r){ return r.json(); })
     .then(function(raw) {
       console.log("GAS raw response:", raw);
