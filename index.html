@@ -1027,45 +1027,56 @@ var RESP_KEY = 'survey_responses';
 function fetchGAS() {
   var sumEl = document.getElementById("resp-summary");
   var listEl = document.getElementById("resp-list");
+  if (!sumEl) return;
   sumEl.innerHTML = "<p style='color:#C8963E;font-weight:700'>⏳ 正在從 Google Sheet 載入...</p>";
-  listEl.innerHTML = "";
+  if (listEl) listEl.innerHTML = "";
 
   fetch("https://script.google.com/macros/s/AKfycbxrcOvBM27g1qyEmTE8td3qtHz_o3OdpHEXhtopxi0xGMRj0FS_2m-7k5i8URu3CSIs/exec?action=getAll")
     .then(function(r){ return r.json(); })
-    .then(function(data) {
-      if (!data || !data.length) {
-        sumEl.innerHTML = "<p style='color:#6B7280'>Google Sheet 尚無填寫記錄</p>";
+    .then(function(raw) {
+      console.log("GAS raw response:", raw);
+      var rows = [];
+      if (Array.isArray(raw)) {
+        rows = raw;
+      } else if (raw && Array.isArray(raw.data)) {
+        rows = raw.data;
+      } else if (raw && Array.isArray(raw.records)) {
+        rows = raw.records;
+      } else {
+        rows = [];
+      }
+      console.log("Parsed rows:", rows.length, rows);
+      if (!rows.length) {
+        sumEl.innerHTML = "<p style='color:#6B7280'>Google Sheet 尚無填寫記錄，或回傳格式不符。請開啟 Console 查看 GAS raw response。</p>";
         return;
       }
-      // Merge with localStorage
       var local = [];
       try { local = JSON.parse(localStorage.getItem(RESP_KEY)||"[]"); } catch(e){}
-      
-      // Dedupe by name+timestamp
       var seen = {};
-      local.forEach(function(r){ seen[r.name+"||"+(r.timestamp||"")] = true; });
-      
+      local.forEach(function(r) {
+        var key = (r.name||r.member||r["委員"]||"") + "||" + (r.timestamp||r.time||r["時間"]||"");
+        seen[key] = true;
+      });
       var added = 0;
-      data.forEach(function(r) {
-        var key = r.name+"||"+(r.timestamp||"");
+      rows.forEach(function(r) {
+        var key = (r.name||r.member||r["委員"]||"") + "||" + (r.timestamp||r.time||r["時間"]||"");
         if (!seen[key]) {
           local.push(r);
           seen[key] = true;
           added++;
         }
       });
-      
       localStorage.setItem(RESP_KEY, JSON.stringify(local));
-      loadResponses(); // Re-render with merged data
-      
+      loadResponses();
       var notice = document.createElement("div");
       notice.style.cssText = "position:fixed;top:20px;right:20px;background:#1E7C5A;color:#fff;padding:10px 20px;border-radius:10px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.2)";
-      notice.textContent = "✅ 載入完成！新增 " + added + " 筆記錄";
+      notice.textContent = "✅ 從 Google Sheet 載入完成！新增 " + added + " 筆記錄，共 " + rows.length + " 筆";
       document.body.appendChild(notice);
       setTimeout(function(){ notice.remove(); }, 3000);
     })
     .catch(function(e) {
-      sumEl.innerHTML = "<p style='color:#C0392B'>❌ 載入失敗：" + e.message + "</p>";
+      console.error("fetchGAS error:", e);
+      sumEl.innerHTML = "<p style='color:#C0392B'>❌ Google Sheet 載入失敗：" + e.message + "</p>";
     });
 }
 
@@ -1082,8 +1093,10 @@ function loadResponses() {
   }
   var byMember = {};
   saved.forEach(function(r) {
-    if (!byMember[r.name]) byMember[r.name] = [];
-    byMember[r.name].push(r);
+    var mn = r.name || r.member || r["委員"] || "未命名委員";
+    if (!byMember[mn]) byMember[mn] = [];
+    r._memberName = mn;
+    byMember[mn].push(r);
   });
   var sh = '';
   Object.keys(byMember).forEach(function(m) {
@@ -1109,12 +1122,14 @@ function loadResponses() {
     var total = Object.keys(resps).length;
     var aOk=0,aNo=0,tOk=0,tNo=0;
     Object.values(resps).forEach(function(v){
-      if(v.analy===true)aOk++; else if(v.analy===false)aNo++;
-      if(v.thresh===true)tOk++; else if(v.thresh===false)tNo++;
+      var a = v.analyAgree !== undefined ? v.analyAgree : v.analy;
+      var t = v.threshAgree !== undefined ? v.threshAgree : v.thresh;
+      if(a===true)aOk++; else if(a===false)aNo++;
+      if(t===true)tOk++; else if(t===false)tNo++;
     });
     var bg = idx%2===0?'#fff':'#F9FAFB';
     h += '<tr style="background:'+bg+';border-bottom:1px solid #F3F4F6">';
-    h += '<td style="padding:8px 10px;font-weight:600">'+r.name+'</td>';
+    h += '<td style="padding:8px 10px;font-weight:600">'+(r.name||r.member||r['委員']||'未命名')+'</td>';
     h += '<td style="padding:8px 10px;color:#6B7280">'+(r.timestamp||'')+'</td>';
     h += '<td style="padding:8px 10px;text-align:center">'+total+'</td>';
     h += '<td style="padding:8px 10px;text-align:center"><span style="color:#1E7C5A">✓'+aOk+'</span> <span style="color:#C0392B">✗'+aNo+'</span></td>';
