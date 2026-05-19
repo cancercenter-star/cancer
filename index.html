@@ -1038,134 +1038,61 @@ function fetchGAS() {
   sumEl.innerHTML = "<p style='color:#C8963E;font-weight:700'>⏳ 正在從 Google Sheet 載入...</p>";
   if (listEl) listEl.innerHTML = "";
 
-  fetch("https://script.google.com/macros/s/AKfycbxD9yZu-7OmClIusfkSVt-1m-e3b2nNJ3SY5SivRmPSzRchx08YKfaI5S3vC9v0VNdh/exec?action=getAll")
-    .then(function(r){ return r.json(); })
-    .then(function(raw) {
-      console.log("GAS raw response:", raw);
-      var rows = [];
-      if (Array.isArray(raw)) {
-        rows = raw;
-      } else if (raw && Array.isArray(raw.data)) {
-        rows = raw.data;
-      } else if (raw && Array.isArray(raw.records)) {
-        rows = raw.records;
-      } else if (raw && Array.isArray(raw.rows)) {
-        rows = raw.rows;
-      }
-      console.log("Parsed rows count:", rows.length);
-      console.log("Parsed rows:", rows);
+  var cbName = 'gasCallback_' + Date.now();
+  var script = document.createElement('script');
+  var done = false;
 
-      if (!rows.length) {
-        sumEl.innerHTML = "<p style='color:#6B7280'>Google Sheet 尚無填寫記錄，或回傳格式不符。請開啟 Console 查看 GAS raw response。</p>";
-        return;
-      }
+  window[cbName] = function(raw) {
+    done = true;
+    delete window[cbName];
+    if (script.parentNode) script.parentNode.removeChild(script);
+    console.log("GAS raw response:", raw);
+    var rows = [];
+    if (Array.isArray(raw)) rows = raw;
+    else if (raw && Array.isArray(raw.data)) rows = raw.data;
+    else if (raw && Array.isArray(raw.records)) rows = raw.records;
+    else if (raw && Array.isArray(raw.rows)) rows = raw.rows;
+    console.log("Parsed rows count:", rows.length, rows);
 
-      var local = [];
-      try { local = JSON.parse(localStorage.getItem(RESP_KEY)||"[]"); } catch(e){}
-
-      var seen = {};
-      local.forEach(function(r) {
-        var key = getMemberName(r) + "||" + getTimeValue(r) + "||" + JSON.stringify(r.answers||r.responses||r);
-        seen[key] = true;
-      });
-
-      var added = 0;
-      rows.forEach(function(r) {
-        var mn = getMemberName(r);
-        var tv = getTimeValue(r);
-        var key = mn + "||" + tv + "||" + JSON.stringify(r.answers||r.responses||r);
-        console.log("Row:", mn, tv, key.substring(0,80));
-        if (!seen[key]) {
-          local.push(r);
-          seen[key] = true;
-          added++;
-        }
-      });
-
-      localStorage.setItem(RESP_KEY, JSON.stringify(local));
-      loadResponses();
-
-      var notice = document.createElement("div");
-      notice.style.cssText = "position:fixed;top:20px;right:20px;background:#1E7C5A;color:#fff;padding:10px 20px;border-radius:10px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.2)";
-      notice.textContent = "✅ 從 Google Sheet 載入完成！新增 " + added + " 筆記錄，共 " + rows.length + " 筆";
-      document.body.appendChild(notice);
-      setTimeout(function(){ notice.remove(); }, 3000);
-    })
-    .catch(function(e) {
-      console.error("fetchGAS error:", e);
-      sumEl.innerHTML = "<p style='color:#C0392B'>❌ Google Sheet 載入失敗：" + e.message + "</p>";
-    });
-}
-
-function loadResponses() {
-  var saved = [];
-  try { saved = JSON.parse(localStorage.getItem(RESP_KEY)||"[]"); } catch(e){}
-  var sumEl = document.getElementById("resp-summary");
-  var listEl = document.getElementById("resp-list");
-  if (!sumEl) return;
-
-  if (!saved.length) {
-    sumEl.innerHTML = "<p style='color:#6B7280;font-style:italic;grid-column:1/-1'>尚無填寫記錄</p>";
-    if (listEl) listEl.innerHTML = "";
-    return;
-  }
-
-  var byMember = {};
-  MNM.concat(MMED).forEach(function(m){ byMember[m] = byMember[m] || []; });
-  saved.forEach(function(r) {
-    var mn = getMemberName(r) || "未命名委員";
-    if (!byMember[mn]) byMember[mn] = [];
-    byMember[mn].push(r);
-  });
-
-  var sh = "";
-  Object.keys(byMember).sort().forEach(function(m) {
-    var entries = byMember[m];
-    var latest = entries.length ? entries[entries.length-1] : null;
-    var total = latest ? Object.keys(latest.responses||latest.answers||{}).length : 0;
-    var bg = total > 0 ? "#EDF6F7" : "#F9FAFB";
-    var bc = total > 0 ? "#83C5BE" : "#E5E7EB";
-    sh += "<div style='background:"+bg+";border:1px solid "+bc+";border-radius:10px;padding:12px 16px'>";
-    sh += "<div style='font-weight:700;color:#004E56;margin-bottom:4px'>"+m+"</div>";
-    if (total > 0) {
-      sh += "<div style='font-size:12px;color:#1E7C5A;font-weight:700'>✅ 填寫 "+total+" 項</div>";
-      sh += "<div style='font-size:11px;color:#9CA3AF'>"+(latest ? getTimeValue(latest) : "")+"</div>";
-    } else {
-      sh += "<div style='font-size:12px;color:#9CA3AF'>⏳ 尚未填寫</div>";
+    if (!rows.length) {
+      sumEl.innerHTML = "<p style='color:#6B7280'>Google Sheet 尚無填寫記錄。</p>";
+      return;
     }
-    sh += "</div>";
-  });
-  sumEl.innerHTML = sh || "<p style='color:#6B7280;font-style:italic'>尚無委員名單</p>";
-
-  if (!listEl) return;
-  var h = "<table style='width:100%;border-collapse:collapse;font-size:12px'>";
-  h += "<thead><tr style='background:#006D77;color:#fff'>";
-  ["委員","時間","填寫項數","分析合理✓/✗","閾值合理✓/✗"].forEach(function(col){
-    h += "<th style='padding:8px 10px;text-align:left'>"+col+"</th>";
-  });
-  h += "</tr></thead><tbody>";
-  saved.forEach(function(r, idx) {
-    var resps = r.responses || r.answers || {};
-    var total = Object.keys(resps).length;
-    var aOk=0, aNo=0, tOk=0, tNo=0;
-    Object.values(resps).forEach(function(v){
-      var a = v.analyAgree !== undefined ? v.analyAgree : v.analy;
-      var t = v.threshAgree !== undefined ? v.threshAgree : v.thresh;
-      if(a===true)aOk++; else if(a===false)aNo++;
-      if(t===true)tOk++; else if(t===false)tNo++;
+    var local = [];
+    try { local = JSON.parse(localStorage.getItem(RESP_KEY)||"[]"); } catch(e){}
+    var seen = {};
+    local.forEach(function(r) { seen[getMemberName(r)+"||"+getTimeValue(r)] = true; });
+    var added = 0;
+    rows.forEach(function(r) {
+      var key = getMemberName(r)+"||"+getTimeValue(r);
+      if (!seen[key]) { local.push(r); seen[key]=true; added++; }
     });
-    var bg = idx%2===0 ? "#fff" : "#F9FAFB";
-    h += "<tr style='background:"+bg+";border-bottom:1px solid #F3F4F6'>";
-    h += "<td style='padding:8px 10px;font-weight:600'>"+(getMemberName(r)||"未命名")+"</td>";
-    h += "<td style='padding:8px 10px;color:#6B7280'>"+getTimeValue(r)+"</td>";
-    h += "<td style='padding:8px 10px;text-align:center'>"+total+"</td>";
-    h += "<td style='padding:8px 10px;text-align:center'><span style='color:#1E7C5A'>✓"+aOk+"</span> <span style='color:#C0392B'>✗"+aNo+"</span></td>";
-    h += "<td style='padding:8px 10px;text-align:center'><span style='color:#1E7C5A'>✓"+tOk+"</span> <span style='color:#C0392B'>✗"+tNo+"</span></td>";
-    h += "</tr>";
-  });
-  h += "</tbody></table>";
-  listEl.innerHTML = h;
+    localStorage.setItem(RESP_KEY, JSON.stringify(local));
+    loadResponses();
+    var notice = document.createElement("div");
+    notice.style.cssText = "position:fixed;top:20px;right:20px;background:#1E7C5A;color:#fff;padding:10px 20px;border-radius:10px;font-weight:700;font-size:14px;z-index:9999";
+    notice.textContent = "✅ 載入完成！新增 "+added+" 筆，共 "+rows.length+" 筆";
+    document.body.appendChild(notice);
+    setTimeout(function(){ notice.remove(); }, 3000);
+  };
+
+  script.onerror = function() {
+    if (!done) {
+      console.error("JSONP script load failed");
+      sumEl.innerHTML = "<p style='color:#C0392B'>❌ Google Sheet 載入失敗</p>";
+    }
+  };
+
+  setTimeout(function() {
+    if (!done) {
+      sumEl.innerHTML = "<p style='color:#C0392B'>❌ 載入逾時，請確認 GAS 已部署</p>";
+    }
+  }, 10000);
+
+  script.src = "https://script.google.com/macros/s/AKfycbxD9yZu-7OmClIusfkSVt-1m-e3b2nNJ3SY5SivRmPSzRchx08YKfaI5S3vC9v0VNdh/exec?action=getAll&callback=" + cbName;
+  document.head.appendChild(script);
 }
+
 
 
 function exportCSV() {
