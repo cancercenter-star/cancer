@@ -103,17 +103,18 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
 .vote-btn.agree.selected{border-color:var(--green);background:var(--green-light);color:var(--green)}
 .vote-btn.disagree.selected{border-color:var(--red);background:var(--red-light);color:var(--red)}
 
-/* SIDEBAR TOC */
-#toc-sidebar{position:fixed;right:0;top:50%;transform:translateY(-50%);width:36px;background:#006D77;border-radius:12px 0 0 12px;padding:8px 0;z-index:200;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:-2px 0 12px rgba(0,0,0,.15);transition:width .2s;}
-#toc-sidebar.open{width:220px;}
-#toc-toggle{background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:6px;width:100%;text-align:center;}
-#toc-list{display:none;width:100%;max-height:60vh;overflow-y:auto;padding:4px 0;}
-#toc-sidebar.open #toc-list{display:block;}
-.toc-item{display:flex;align-items:center;gap:6px;padding:5px 10px;cursor:pointer;color:#fff;font-size:11px;border-radius:4px;margin:1px 4px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.toc-item:hover{background:rgba(255,255,255,.2);}
-.toc-item.done{color:#83C5BE;}
-.toc-item .toc-no{background:rgba(255,255,255,.2);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
-.toc-item.done .toc-no{background:#83C5BE;color:#004E56;}
+
+/* FLOATING TOC BUTTON */
+#toc-fab{position:fixed;right:18px;bottom:80px;z-index:300;}
+#toc-fab-btn{width:48px;height:48px;border-radius:50%;background:#006D77;color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;}
+#toc-panel{display:none;position:absolute;bottom:56px;right:0;width:240px;max-height:55vh;overflow-y:auto;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:8px 0;}
+#toc-panel.open{display:block;}
+#toc-panel-title{font-size:11px;font-weight:700;color:#006D77;padding:4px 12px 6px;border-bottom:1px solid #F3F4F6;}
+.toc-item{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:#374151;}
+.toc-item:hover{background:#EDF6F7;}
+.toc-item.done{color:#1E7C5A;}
+.toc-item .toc-no{background:#E5E7EB;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.toc-item.done .toc-no{background:#1E7C5A;color:#fff;}
 /* DISAGREE SUB-OPTIONS */
 .disagree-sub{display:none;background:#FFF5F5;border:1.5px solid #FBCBC8;border-radius:8px;padding:12px 14px;margin-top:8px}
 .disagree-sub.show{display:block}
@@ -222,9 +223,9 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
     </div>
   </div>
   <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
-  <div id="toc-sidebar">
-    <button id="toc-toggle" onclick="toggleToc()" title="指標目錄">☰</button>
-    <div id="toc-list"></div>
+    <div id="toc-fab">
+    <div id="toc-panel"><div id="toc-panel-title">📋 指標目錄</div><div id="toc-list"></div></div>
+    <button id="toc-fab-btn" onclick="toggleToc()" title="指標目錄">☰</button>
   </div>
   <div id="survey-body"></div>
   <div class="nav-footer">
@@ -276,8 +277,8 @@ const GROUPS = [{"id":"q1","name":"Q1 抗癌藥物安全組","type":"non-medical
 // ══════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════
-var MEETING_LINKS = {"m1-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-2":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-3":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-4":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}; // runtime-populated
-var _presetMember='趙祖怡';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵循率","type":"medical","total":4,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵循率－口腔癌","attr":"正","change":"","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","missed":"","t115":"90%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。 二名病人無法配合檢查與會診。 改善：已建立檢查套餐，加強宣導。","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-2","no":"2","cancer":"鼻咽癌","name":"診斷期遵循率－鼻咽癌","attr":"正","change":"","t112":"90%","r112":"100%","frac112":"21/21","t113":"90%","r113":"86%","frac113":"12/14","t114":"90%","r114":"100%","frac114":"18/18","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-3","no":"3","cancer":"口咽癌","name":"診斷期遵循率－口咽癌","attr":"正","change":"","t112":"90%","r112":"83%","frac112":"15/18","t113":"90%","r113":"82%","frac113":"14/17","t114":"90%","r114":"92%","frac114":"24/26","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-4","no":"4","cancer":"下咽癌","name":"診斷期遵循率－下咽癌","attr":"正","change":"","t112":"90%","r112":"93%","frac112":"13/14","t113":"90%","r113":"85%","frac113":"11/13","t114":"90%","r114":"71%","frac114":"5/7","missed":"","t115":"85%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"兩名病人採緩和治療，經主治醫師評估，無安排檢查之必要。","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}]}];
+var MEETING_LINKS = {"m1-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-2":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-3":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-4":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-5":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-6":"https://drive.google.com/file/d/18u3yScFF0xogG_yYXJQixrOyTUZik_AZ/view?usp=drive_link","m8-17":"https://drive.google.com/file/d/18u3yScFF0xogG_yYXJQixrOyTUZik_AZ/view?usp=drive_link"}; // runtime-populated
+var _presetMember='趙祖怡';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵循率","type":"medical","total":6,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵循率－口腔癌","attr":"正","change":"","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","missed":"","t115":"90%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。 二名病人無法配合檢查與會診。 改善：已建立檢查套餐，加強宣導。","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-2","no":"2","cancer":"鼻咽癌","name":"診斷期遵循率－鼻咽癌","attr":"正","change":"","t112":"90%","r112":"100%","frac112":"21/21","t113":"90%","r113":"86%","frac113":"12/14","t114":"90%","r114":"100%","frac114":"18/18","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-3","no":"3","cancer":"口咽癌","name":"診斷期遵循率－口咽癌","attr":"正","change":"","t112":"90%","r112":"83%","frac112":"15/18","t113":"90%","r113":"82%","frac113":"14/17","t114":"90%","r114":"92%","frac114":"24/26","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-4","no":"4","cancer":"下咽癌","name":"診斷期遵循率－下咽癌","attr":"正","change":"","t112":"90%","r112":"93%","frac112":"13/14","t113":"90%","r113":"85%","frac113":"11/13","t114":"90%","r114":"71%","frac114":"5/7","missed":"","t115":"85%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"兩名病人採緩和治療，經主治醫師評估，無安排檢查之必要。","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-5","no":"5","cancer":"喉癌","name":"診斷期遵循率－喉癌","attr":"正","change":"","t112":"90%","r112":"83%","frac112":"5/6","t113":"90%","r113":"89%","frac113":"8/9","t114":"90%","r114":"100%","frac114":"11/11","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-6","no":"6","cancer":"甲狀腺癌","name":"診斷期遵循率－甲狀腺癌","attr":"正","change":"","t112":"90%","r112":"100%","frac112":"66/66","t113":"95%","r113":"100%","frac113":"60/60","t114":"95%","r114":"100%","frac114":"85/85","missed":"","t115":"95%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/18u3yScFF0xogG_yYXJQixrOyTUZik_AZ/view?usp=drive_link"}]},{"id":"m8","name":"M8 完治率","type":"medical","total":1,"missed":0,"lowered":0,"maintained":17,"raised":0,"basis":"C","indicators":[{"id":"m8-17","no":"17","cancer":"甲狀腺癌","name":"完 治 率－甲狀腺癌","attr":"正","change":"","t112":"95%","r112":"100%","frac112":"84/84","t113":"96%","r113":"100%","frac113":"84/84","t114":"96%","r114":"100%","frac114":"73/73","missed":"","t115":"96%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/18u3yScFF0xogG_yYXJQixrOyTUZik_AZ/view?usp=drive_link"}]}];
 var _sheetUrl = ''; // filled by exportSurveyFile()
 
 let state={name:'',role:'',currentGroup:0,groups:[],responses:{},adminLinks:{}};
@@ -398,14 +399,13 @@ function buildGroupHTML(g){
       <span class="section-name">${g.name.replace(/^[QMqm]\d+\s*/,"")}</span>
       ${(function(){var _u=MEETING_LINKS[g.id]||'';return _u?'<a href="'+_u+'" target="_blank" style="margin-left:6px;background:#006D77;color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;text-decoration:none;white-space:nowrap">📎 會議紀錄</a>':'';})()}
     </div>
-    <div class="section-meta">總指標數：${g.total} ｜ 未達閾值：${g.missed}</div>
-    <div class="stat-row">
+      </div>
+      <div class="stat-row">
       <div class="stat-box s-miss"><div class="stat-box-val">${g.missed}</div><div class="stat-box-label">114年未達閾值 項</div></div>
       <div class="stat-box s-down"><div class="stat-box-val">${g.lowered}</div><div class="stat-box-label">115閾值下修 項</div></div>
       <div class="stat-box s-keep" style="background:#EFF6FF;border-color:#BFDBFE"><div class="stat-box-val" style="color:#1D4ED8">${g.maintained}</div><div class="stat-box-label">115閾值維持 項</div></div>
       <div class="stat-box s-up"><div class="stat-box-val">${g.raised}</div><div class="stat-box-label">115閾值上調 項</div></div>
     </div>
-  </div>
   <div id="valert-${g.id}" class="validation-alert">⚠️ 請完成所有標示項目後再繼續</div>`;
   g.indicators.forEach(ind=>{ html+=buildCard(ind); });
   html+=`</div>`;
@@ -642,8 +642,8 @@ function navigate(dir){
 }
 
 function toggleToc(){
-  var sb = document.getElementById('toc-sidebar');
-  if(sb) sb.classList.toggle('open');
+  var panel = document.getElementById('toc-panel');
+  if(panel){ panel.classList.toggle('open'); updateToc(); }
 }
 
 function updateToc(){
@@ -656,7 +656,7 @@ function updateToc(){
     var r = state.responses[ind.id] || {};
     var done = r.discAgree !== undefined && r.analyAgree !== undefined && r.threshAgree !== undefined;
     var shortName = (ind.cancer || ind.name || '').substring(0,14);
-    h += '<div class="toc-item'+(done?' done':'')+'" onclick="jumpTo(''+ind.id+'')">';
+    h += '<div class="toc-item'+(done?' done':'')+'" onclick="jumpTo(\"'+ind.id+'\")">'; 
     h += '<span class="toc-no">'+(done?'✓':ind.no)+'</span>';
     h += '<span style="overflow:hidden;text-overflow:ellipsis">'+shortName+'</span>';
     h += '</div>';
@@ -668,6 +668,8 @@ function jumpTo(id){
   var el = document.getElementById('card-'+id);
   if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); }
 }
+
+document.addEventListener('click',function(e){var fab=document.getElementById('toc-fab');if(fab&&!fab.contains(e.target)){var p=document.getElementById('toc-panel');if(p)p.classList.remove('open');}});
 
 function submitSurvey(){
   var payload = {
