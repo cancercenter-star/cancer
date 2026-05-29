@@ -185,6 +185,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
         <label class="field-label">委員姓名 <span style="color:var(--red)">*</span></label>
         <select id="input-name" class="field-input" onchange="onNameChange()">
           <option value="">— 請選擇姓名 —</option>
+          <option value="李明哲">李明哲</option>
           <option value="張宜崴">張宜崴</option>
           <option value="林哲銘">林哲銘</option>
           <option value="楊哲銘">楊哲銘</option>
@@ -698,6 +699,7 @@ function submitSurvey(){
   fetch("https://script.google.com/macros/s/AKfycbxD9yZu-7OmClIusfkSVt-1m-e3b2nNJ3SY5SivRmPSzRchx08YKfaI5S3vC9v0VNdh/exec", {
     method: "POST",
     mode: "no-cors",
+    headers: {"Content-Type": "text/plain"},
     body: JSON.stringify(payload)
   })
   .then(function(){
