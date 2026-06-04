@@ -931,10 +931,11 @@ function procSheet(wb,sn){
     var _latestYr = _allYrs[_allYrs.length-1]||114;
     var _baseYrData = p.years[String(_latestYr)]||{};
     // Keep backward-compat fixed fields using latest 4 years
-    var _dy = _allYrs.slice(-4); // latest 4
-    while(_dy.length<4) _dy.unshift(0);
+    var _dy = _allYrs.slice(-5); // latest 5 (support up to 116)
+    while(_dy.length<5) _dy.unshift(0);
     var _yd = [p.years[String(_dy[0])]||{}, p.years[String(_dy[1])]||{},
-               p.years[String(_dy[2])]||{}, p.years[String(_dy[3])]||{}];
+               p.years[String(_dy[2])]||{}, p.years[String(_dy[3])]||{},
+               p.years[String(_dy[4])]||{}];
 
     newGroups[p.gid].push({
       id:p.gid+"-"+no, no:String(no), cancer:p.cancer, name:name,
@@ -945,6 +946,7 @@ function procSheet(wb,sn){
       t113:(_yd[1].t||""),r113:(_yd[1].r||""),frac113:(_yd[1].frac||""),
       t114:(_yd[2].t||""),r114:(_yd[2].r||""),frac114:(_yd[2].frac||""),
       missed:"",t115:(_yd[3].t||""),r115:(_yd[3].r||""),frac115:(_yd[3].frac||""),
+      t116:(_yd[4].t||""),r116:(_yd[4].r||""),frac116:(_yd[4].frac||""),
       adj:"keep",basis:"C",reason:"E",
       analysis:_baseYrData.ana||""
     });
@@ -953,27 +955,35 @@ function procSheet(wb,sn){
   // Step 2b: Handle g1 renamed items (持續監測化學治療異常事件 → 化學治療異常事件)
   // Already handled by using 114年 as base - old name rows won't have 114年 data
 
-  // Step 3: Preserve existing t115 values from current GROUPS
+  // Step 3: Preserve existing t115/t116 values from current GROUPS
   var oldT115={};
+  var oldT116={};
   GROUPS.forEach(function(g){
     g.indicators.forEach(function(ind){
       if(ind.t115){
         var k=ind.id.split("-")[0]+"||"+(ind.cancer||"").replace(/\s/g,"");
         oldT115[k]=ind.t115;
-        // Also store by name
         var k2=ind.id.split("-")[0]+"||"+ind.name.replace(/\s/g,"").substring(0,20);
         oldT115[k2]=ind.t115;
+      }
+      if(ind.t116){
+        var k=ind.id.split("-")[0]+"||"+(ind.cancer||"").replace(/\s/g,"");
+        oldT116[k]=ind.t116;
+        var k2=ind.id.split("-")[0]+"||"+ind.name.replace(/\s/g,"").substring(0,20);
+        oldT116[k2]=ind.t116;
       }
     });
   });
 
-  // Apply preserved t115
+  // Apply preserved t115/t116
   Object.keys(newGroups).forEach(function(gid){
     newGroups[gid].forEach(function(ind){
       var k1=gid+"||"+(ind.cancer||"").replace(/\s/g,"");
       var k2=gid+"||"+ind.name.replace(/\s/g,"").substring(0,20);
       if(!ind.t115 && oldT115[k1])ind.t115=oldT115[k1];
       else if(!ind.t115 && oldT115[k2])ind.t115=oldT115[k2];
+      if(!ind.t116 && oldT116[k1])ind.t116=oldT116[k1];
+      else if(!ind.t116 && oldT116[k2])ind.t116=oldT116[k2];
     });
   });
 
@@ -1260,7 +1270,8 @@ function renderEditPanel() {
     {yr:"112",tf:"t112",rf:"r112",ff:"frac112",prevT:""},
     {yr:"113",tf:"t113",rf:"r113",ff:"frac113",prevT:"t112"},
     {yr:"114",tf:"t114",rf:"r114",ff:"frac114",prevT:"t113"},
-    {yr:"115",tf:"t115",rf:"r115",ff:"frac115",prevT:"t114"}
+    {yr:"115",tf:"t115",rf:"r115",ff:"frac115",prevT:"t114"},
+    {yr:"116",tf:"t116",rf:"r116",ff:"frac116",prevT:"t115"}
   ];
 
   var h = "<div style='margin-bottom:12px;color:#6B7280;font-size:12px'>共 "+g.indicators.length+" 個指標 ｜ <span style=\"color:#C0392B\">紅色</span>=同年未達閾值 ｜ <span style=\"color:#1A56DB\">藍色</span>=閾值較前年調整</div>";
@@ -1306,7 +1317,8 @@ function renderEditPanel() {
       var tChanged = threshChanged(prevTval, tval);
 
       var isY115 = y.yr==="115";
-      var yrStyle = isY115 ? "background:#FFF9EC;font-weight:800;color:#B45309" : "background:#F0F4F8";
+      var isY116 = y.yr==="116";
+      var yrStyle = isY116 ? "background:#FFF3E0;font-weight:800;color:#E65100" : isY115 ? "background:#FFF9EC;font-weight:800;color:#B45309" : "background:#F0F4F8";
 
       h += "<div style='grid-column:1/-1;font-size:11px;font-weight:700;color:#6B7280;padding:3px 6px;border-radius:4px;"+yrStyle+"'>"+y.yr+" 年</div>";
 
@@ -1370,7 +1382,7 @@ function updInd(el) {
   if (!card) return;
 
   // Re-color r cells (missed = red)
-  ['r112','r113','r114'].forEach(function(rf) {
+  ['r112','r113','r114','r115'].forEach(function(rf) {
     var tf = rf.replace('r','t');
     var missed = isMissed(attr, ind[tf], ind[rf]);
     var inp = card.querySelector('input[data-f="'+rf+'"]');
@@ -1379,7 +1391,7 @@ function updInd(el) {
   });
 
   // Re-color t cells (threshold changed vs prev year = blue)
-  [['t113','t112'],['t114','t113']].forEach(function(p) {
+  [['t113','t112'],['t114','t113'],['t115','t114'],['t116','t115']].forEach(function(p) {
     var changed = threshChanged(ind[p[1]], ind[p[0]]);
     var inp = card.querySelector('input[data-f="'+p[0]+'"]');
     if (inp) inp.style.color = changed ? '#1A56DB' : '#374151';
