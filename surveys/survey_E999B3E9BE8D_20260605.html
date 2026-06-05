@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>[v-checkDone] 癌症品質指標審查－醫療委員 第2組</title>
+<title>[v-checkDone] 癌症品質指標審查－非醫療委員 第1組</title>
 <style>
 :root{
   --teal:#006D77;--teal-dark:#004E56;--teal-light:#83C5BE;--teal-bg:#EDF6F7;
@@ -171,38 +171,26 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
     <div class="landing-logo">
       <div class="hospital">TMU-SHH 雙和醫院</div>
       <div class="title">癌症品質指標<br>委員審查系統</div>
-      <div class="subtitle">醫療委員 第2組｜<span id="survey-subtitle-years"></span></div>
+      <div class="subtitle">非醫療委員 第1組｜<span id="survey-subtitle-years"></span></div>
     </div>
     <div class="landing-card">
       <div style="background:var(--teal-bg);border:1.5px solid var(--teal-light);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
-        <span style="font-size:28px">🏥</span>
+        <span style="font-size:28px">💊</span>
         <div>
-          <div style="font-size:14px;font-weight:700;color:var(--teal-dark)">醫療委員 第2組</div>
-          <div style="font-size:12px;color:var(--gray);margin-top:2px">診斷期 → 完治率｜共8個功能小組</div>
+          <div style="font-size:14px;font-weight:700;color:var(--teal-dark)">非醫療委員 第1組</div>
+          <div style="font-size:12px;color:var(--gray);margin-top:2px">抗癌藥物 → 心理腫瘤｜共7個功能小組</div>
         </div>
       </div>
       <div class="field-group">
         <label class="field-label">委員姓名 <span style="color:var(--red)">*</span></label>
         <select id="input-name" class="field-input" onchange="onNameChange()">
           <option value="">— 請選擇姓名 —</option>
-          <option value="李明哲">李明哲</option>
-          <option value="張宜崴">張宜崴</option>
-          <option value="林哲銘">林哲銘</option>
-          <option value="楊哲銘">楊哲銘</option>
-          <option value="馮博皓">馮博皓</option>
-          <option value="沈宛真">沈宛真</option>
-          <option value="宋睿祥">宋睿祥</option>
-          <option value="劉惠文">劉惠文</option>
-          <option value="溫國璋">溫國璋</option>
-          <option value="蔡若婷">蔡若婷</option>
-          <option value="李秋桂">李秋桂</option>
-          <option value="李國隆">李國隆</option>
-          <option value="李明憲">李明憲</option>
-          <option value="徐嘉鴻">徐嘉鴻</option>
-          <option value="哈多吉">哈多吉</option>
-          <option value="李文生">李文生</option>
+          <option value="陳龍">陳龍</option>
+          <option value="林芊芊">林芊芊</option>
+          <option value="陳淑惠">陳淑惠</option>
+          <option value="莊世玟">莊世玟</option>
           <option value="趙祖怡">趙祖怡</option>
-          <option value="蔡易杰">蔡易杰</option>
+          <option value="黃瑋妮">黃瑋妮</option>
         </select>
       </div>
       <button class="btn-start" id="btn-start" onclick="startSurvey()" disabled>開始填寫 →</button>
@@ -215,7 +203,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
 <!-- ═══ PAGE: SURVEY ═══ -->
 <div id="page-survey" class="page">
   <div class="topbar">
-    <div class="topbar-title">癌症品質指標審查｜醫療委員 第2組</div>
+    <div class="topbar-title">癌症品質指標審查｜非醫療委員 第1組</div>
     <div id="autosave-indicator" style="color:#83C5BE;font-size:12px;opacity:0;transition:opacity .5s">✓ 已自動存取</div>
     <div class="topbar-right">
       <span id="user-badge" class="badge">委員</span>
@@ -277,8 +265,8 @@ const GROUPS = [{"id":"q1","name":"Q1 抗癌藥物安全組","type":"non-medical
 // ══════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════
-var MEETING_LINKS = {"m1-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-2":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}; // runtime-populated
-var _presetMember='陳龍';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵循率","type":"medical","total":2,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵循率－口腔癌","attr":"正","change":"","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","missed":"","t115":"90%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。 二名病人無法配合檢查與會診。 改善：已建立檢查套餐，加強宣導。","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-2","no":"2","cancer":"鼻咽癌","name":"診斷期遵循率－鼻咽癌","attr":"正","change":"","t112":"90%","r112":"100%","frac112":"21/21","t113":"90%","r113":"86%","frac113":"12/14","t114":"90%","r114":"100%","frac114":"18/18","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}]}];
+var MEETING_LINKS = {"q4-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","q4-2":"https://drive.google.com/file/d/1JQTZ5PbF16SvqibVkeWFXpOHfeO4a63G/view?usp=sharing"}; // runtime-populated
+var _presetMember='陳龍';var _bakedGroups = [{"id":"q1","name":"Q1 抗癌藥物安全組","type":"non-medical","total":1,"missed":0,"lowered":0,"maintained":20,"raised":0,"basis":"C","indicators":[{"id":"q1-1","no":"1","cancer":"肺癌","name":"化學治療處方遵循率－肺癌","attr":"正","change":"","t112":"85%","r112":"91%","frac112":"115/126","t113":"92%","r113":"92%","frac113":"121/132","t114":"92%","r114":"88%","frac114":"133/151","missed":"","t115":"92%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"劑量9件：皆為病人高齡或體質虛弱，故選用較低劑量。 藥品組合9件：病人因素，依照文獻選用其他療效較佳之regimen","meetingUrl":""}]},{"id":"q4","name":"Q4 影像診斷品質提升組","type":"non-medical","total":2,"missed":0,"lowered":0,"maintained":20,"raised":0,"basis":"C","indicators":[{"id":"q4-1","no":"1","cancer":"鼻咽癌","name":"初始套用率－鼻咽癌","attr":"正","change":"","t112":"95%","r112":"95.2%","frac112":"20/21","t113":"95%","r113":"87.5%","frac113":"","t114":"90%","r114":"90.9%","frac114":"","missed":"","t115":"90%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"q4-2","no":"2","cancer":"食道癌","name":"初始套用率－食道癌","attr":"正","change":"","t112":"85%","r112":"93.3%","frac112":"28/30","t113":"85%","r113":"96.7%","frac113":"","t114":"85%","r114":"87.2%","frac114":"","missed":"","t115":"85%","r115":"","frac115":"","adj":"keep","basis":"C","reason":"E","analysis":"","meetingUrl":"https://drive.google.com/file/d/1JQTZ5PbF16SvqibVkeWFXpOHfeO4a63G/view?usp=sharing"}]}];
 var _sheetUrl = ''; // filled by exportSurveyFile()
 
 let state={name:'',role:'',currentGroup:0,groups:[],responses:{},adminLinks:{}};
@@ -293,19 +281,37 @@ function getGroups(){
 // ══════════════════════════════════════════════════════
 // LANDING
 // ══════════════════════════════════════════════════════
-// ── Role locked: 醫療委員 第2組 ──
-state.role = 'medical';
+// ── Role locked: 非醫療委員 第1組 ──
+state.role = 'non-medical';
+
+// Show subtitle years on landing page immediately
+(function(){
+  var gs = (typeof _bakedGroups!=='undefined'&&_bakedGroups) ? _bakedGroups : (typeof GROUPS!=='undefined'?GROUPS:[]);
+  var latestResult=112, latestThresh=113;
+  gs.forEach(function(g){ if(!g.indicators) return;
+    g.indicators.forEach(function(ind){
+      [112,113,114,115,116,117,118,119,120].forEach(function(y){
+        if(ind['r'+y]&&String(ind['r'+y]).trim()) latestResult=Math.max(latestResult,y);
+        if(ind['t'+y]&&String(ind['t'+y]).trim()) latestThresh=Math.max(latestThresh,y);
+      });
+    });
+  });
+  window.addEventListener('DOMContentLoaded',function(){
+    var sub=document.getElementById('survey-subtitle-years');
+    if(sub) sub.textContent=latestResult+'年執行成果 & '+latestThresh+'年閾值審查';
+  });
+})();
 
 function onNameChange(){
   state.name = document.getElementById('input-name').value;
-  state.role = 'medical';
+  state.role = 'non-medical';
   document.getElementById('btn-start').disabled = !state.name;
 }
 function checkStart(){
   document.getElementById('btn-start').disabled = !state.name;
 }
 function startSurvey(){
-  if(!state.role) state.role = 'medical';
+  if(!state.role) state.role = 'non-medical';
   if(!state.name) return;
   state.groups = getGroups();
   state.currentGroup = 0;
@@ -314,24 +320,28 @@ function startSurvey(){
   var restored = loadAutosave();
   renderSurvey();
   showPage('survey');
-  setTimeout(updateSurveyYearLabels, 100);
-  if(restored) { renderSurvey(); updateSurveyYearLabels(); } // re-render with restored data
+  // Fill subtitle years based on actual data
+  (function(){
+    var gs = state.groups || [];
+    var latestResult = 112, latestThresh = 113;
+    gs.forEach(function(g){ if(!g.indicators) return;
+      g.indicators.forEach(function(ind){
+        [112,113,114,115,116,117,118,119,120].forEach(function(y){
+          if(ind['r'+y]&&String(ind['r'+y]).trim()) latestResult=Math.max(latestResult,y);
+          if(ind['t'+y]&&String(ind['t'+y]).trim()) latestThresh=Math.max(latestThresh,y);
+        });
+      });
+    });
+    var sub=document.getElementById('survey-subtitle-years');
+    if(sub) sub.textContent=latestResult+'年執行成果 & '+latestThresh+'年閾值審查';
+  })();
+  if(restored) renderSurvey();
 }
 
 // ══════════════════════════════════════════════════════
 // SURVEY
 // ══════════════════════════════════════════════════════
 
-// Dynamic year labels (deprecated - now per-indicator)
-function updateSurveyYearLabels() { /* no-op */ });
-    });
-  });
-  // Update all year spans
-  document.querySelectorAll('.yr-result, .vq-result-yr').forEach(function(el){ el.textContent = latestResult; });
-  document.querySelectorAll('.vq-thresh-yr').forEach(function(el){ el.textContent = latestThresh; });
-  var sub = document.getElementById('survey-subtitle-years');
-  if(sub) sub.textContent = latestResult + '年執行成果 & ' + latestThresh + '年閾值審查';
-}
 
 function renderSurvey(){
   const g=state.groups[state.currentGroup];
@@ -456,7 +466,7 @@ function buildCard(ind){
   // Per-indicator display years
   const _indDyrs = (ind.displayYears && ind.displayYears.filter(Boolean).length)
     ? ind.displayYears.filter(Boolean)
-    : [112,113,114,115,116,117,118,119,120].filter(function(y){ return (ind['t'+y]||ind['r'+y]); }).slice(-4);
+    : (function(){ var _f=[]; [112,113,114,115,116,117,118,119,120].forEach(function(y){ if(ind['t'+y]||ind['r'+y]) _f.push(y); }); return _f.slice(-4); })();
   const _indResultYr = _indDyrs.length >= 2 ? _indDyrs[_indDyrs.length-2] : (_indDyrs[0]||114);
   const _indThreshYr = _indDyrs.length >= 1 ? _indDyrs[_indDyrs.length-1] : 115;
 
@@ -475,7 +485,7 @@ function buildCard(ind){
     ${(function(){
       // Get display years: from ind.displayYears or detect from ind.years or t/r fields
       var dyrs = ind.displayYears && ind.displayYears.filter(Boolean).length
-        ? ind.displayYears.filter(Boolean)
+        ? ind.displayYears.filter(Boolean).slice(-4)
         : (function(){
             var found=[];
             if(ind.years){
@@ -487,7 +497,7 @@ function buildCard(ind){
             }
             return found.slice(-4);
           })();
-      if(!dyrs.length) dyrs=[112,113,114,115];
+      if(!dyrs.length){ [112,113,114,115,116,117,118,119,120].forEach(function(y){ if(ind['t'+y]||ind['r'+y]) dyrs.push(y); }); dyrs=dyrs.slice(-4); }
       var html='';
       dyrs.forEach(function(y,i){
         var isLast = i===dyrs.length-1;
@@ -515,7 +525,7 @@ function buildCard(ind){
     </div>
   </div>
   <div class="analysis-section">
-    <div class="analysis-title">${(ind.displayYears&&ind.displayYears.length?ind.displayYears.filter(Boolean).slice(-2,-1)[0]:114)}年未達閾值分析及改善 <span style="font-size:14px;font-weight:600;color:#006D77">（團隊提供）</span></div>
+    <div class="analysis-title">${(function(){ var _f=[]; [112,113,114,115,116,117,118,119,120].forEach(function(y){ if(ind['r'+y]&&String(ind['r'+y]).trim()) _f.push(y); }); return _f.length>=1?_f[_f.length-1]:114; })()}年未達閾值分析及改善 <span style="font-size:14px;font-weight:600;color:#006D77">（小組提供）</span></div>
     <div class="analysis-text">${ind.analysis ? ind.analysis.replace(/\n/g,'<br>') : '無'}</div>
   </div>
   
@@ -1578,7 +1588,7 @@ function updateNameDropdown(){
 
 
 // DISPATCH
-var DISPATCH_MEMBERS = ["李明哲","張宜崴","林哲銘","楊哲銘","馮博皓","沈宛真","宋睿祥","劉惠文","溫國璋","蔡若婷","蔡易傑","李秋桂","李國隆","李明憲","徐嘉鴻","哈多吉","李文生","趙祖怡"];
+var DISPATCH_MEMBERS = ["陳龍","林芊芊","陳淑惠","莊世玟","趙祖怡","黃瑋妮"];
 
 function renderDispatchTab() {
   var data;
@@ -1755,7 +1765,7 @@ function dispatchClear() {
   // Auto-start if dispatched
   if(typeof _bakedGroups!=='undefined'&&_bakedGroups&&_bakedGroups.length>0&&
      typeof _presetMember!=='undefined'&&_presetMember){
-    state.name=_presetMember; state.role='medical'; startSurvey();
+    state.name=_presetMember; state.role='non-medical'; startSurvey();
   }
 })();
 
