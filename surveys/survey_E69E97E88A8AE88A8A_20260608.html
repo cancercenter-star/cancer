@@ -185,7 +185,6 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
         <label class="field-label">委員姓名 <span style="color:var(--red)">*</span></label>
         <select id="input-name" class="field-input" onchange="onNameChange()">
           <option value="">— 請選擇姓名 —</option>
-          <option value="李明哲">李明哲</option>
           <option value="張宜崴">張宜崴</option>
           <option value="林哲銘">林哲銘</option>
           <option value="楊哲銘">楊哲銘</option>
@@ -277,8 +276,8 @@ const GROUPS = [{"id":"q1","name":"Q1 抗癌藥物安全組","type":"non-medical
 // ══════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════
-var MEETING_LINKS = {"m1-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-2":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-20":"https://drive.google.com/file/d/1LVhM4x6rlAGh6q7_ZSPjw1Zjx2uf4kw0/view?usp=sharing"}; // runtime-populated
-var _presetMember='林芊芊';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵循率","type":"medical","total":3,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵行率－口腔癌","attr":"正","change":"","years":{"112":{"t":"90%","r":"82%","frac":"62/76","ana":"110、111年執行年成果：83% ( 54/65 )、 90% ( 66/73 )，平均值85%；112年未達閾值90%，本團隊113年閾值維持90%持續監測。\r\n\r\n分析：1名術後診斷，拒絕會診營養師、6名採緩和治療，拒絕分期檢查、7名因害怕及經濟因素拒絕胃鏡。\r\n\r\n分析結果：病況因素、病人意願因素。\r\n\r\n改善：病人衛教、轉介社工協助。"},"113":{"t":"90%","r":"69%","frac":"44/64","ana":"113年未達閾值90%，依據過去三年平均80%，團隊會議決議114年維 持原閾值。 分析：14名病人未執行胃鏡、4名病人未會診耳鼻喉科、1名病人未會 診牙科、1名病人未會診營養師。 改善：經一校參院診療指引修訂會議決議，自114年將胃鏡列為選擇性 檢查、團隊會議宣導診療指引共識。"},"114":{"t":"90%","r":"88%","frac":"74/84","ana":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。\r\n 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。\r\n 二名病人無法配合檢查與會診。\r\n 改善：已建立檢查套餐，加強宣導。"}},"displayYears":[112,113,114],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。\r\n 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。\r\n 二名病人無法配合檢查與會診。\r\n 改善：已建立檢查套餐，加強宣導。","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-2","no":"2","cancer":"鼻咽癌","name":"診斷期遵行率－鼻咽癌","attr":"正","change":"","years":{"112":{"t":"90%","r":"100%","frac":"21/21","ana":"110、111年執行年成果：100% ( 10/10 )、 94% ( 16/17 ) ，平均值98%；112年已達閾值90%，本團隊113年閾值維持90%持續監測。"},"113":{"t":"90%","r":"86%","frac":"12/14","ana":"113年未達閾值90%，依據過去三年平均88%，團隊會議決議114年維 持原閾值。 分析：1名病人從急診直接住血腫科，未安排聽力檢查、1名病人經評 估採緩和治療，無做分期檢查之必要。 改善：團隊會議宣導診療指引共識。"},"114":{"t":"90%","r":"100%","frac":"18/18","ana":"NA"}},"displayYears":[112,113,114],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"NA","t112":"90%","r112":"100%","frac112":"21/21","t113":"90%","r113":"86%","frac113":"12/14","t114":"90%","r114":"100%","frac114":"18/18","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-20","no":"20","cancer":"卵巢癌","name":"診斷期遵行率－卵巢癌","attr":"正","change":"","years":{"112":{"t":"90%","r":"100%","frac":"18/18","ana":"110、111年執行年成果：96% ( 29/30 )、96% ( 25/26 )，平均值97%；112年已達閾值90%，本團隊113年閾值往上調至92%持續監測。"},"113":{"t":"92%","r":"100%","frac":"11/11","ana":"113年已達閾值92%，依據過去三年平均99%，團隊會議決議114年提 高閾值。"},"114":{"t":"94%","r":"100%","frac":"29/29","ana":"NA"}},"displayYears":[112,113,114],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"NA","t112":"90%","r112":"100%","frac112":"18/18","t113":"92%","r113":"100%","frac113":"11/11","t114":"94%","r114":"100%","frac114":"29/29","meetingUrl":"https://drive.google.com/file/d/1LVhM4x6rlAGh6q7_ZSPjw1Zjx2uf4kw0/view?usp=sharing"}]}];
+var MEETING_LINKS = {"m1-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-2":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}; // runtime-populated
+var _presetMember='林芊芊';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵循率","type":"medical","total":2,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵行率－口腔癌","attr":"正","change":"","years":{"112":{"t":"90%","r":"82%","frac":"62/76","ana":"110、111年執行年成果：83% ( 54/65 )、 90% ( 66/73 )，平均值85%；112年未達閾值90%，本團隊113年閾值維持90%持續監測。\r\n\r\n分析：1名術後診斷，拒絕會診營養師、6名採緩和治療，拒絕分期檢查、7名因害怕及經濟因素拒絕胃鏡。\r\n\r\n分析結果：病況因素、病人意願因素。\r\n\r\n改善：病人衛教、轉介社工協助。"},"113":{"t":"90%","r":"69%","frac":"44/64","ana":"113年未達閾值90%，依據過去三年平均80%，團隊會議決議114年維 持原閾值。 分析：14名病人未執行胃鏡、4名病人未會診耳鼻喉科、1名病人未會 診牙科、1名病人未會診營養師。 改善：經一校參院診療指引修訂會議決議，自114年將胃鏡列為選擇性 檢查、團隊會議宣導診療指引共識。"},"114":{"t":"90%","r":"88%","frac":"74/84","ana":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。\r\n 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。\r\n 二名病人無法配合檢查與會診。\r\n 改善：已建立檢查套餐，加強宣導。"}},"displayYears":[112,113,114],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。\r\n 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。\r\n 二名病人無法配合檢查與會診。\r\n 改善：已建立檢查套餐，加強宣導。","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-2","no":"2","cancer":"鼻咽癌","name":"診斷期遵行率－鼻咽癌","attr":"正","change":"","years":{"112":{"t":"90%","r":"100%","frac":"21/21","ana":"110、111年執行年成果：100% ( 10/10 )、 94% ( 16/17 ) ，平均值98%；112年已達閾值90%，本團隊113年閾值維持90%持續監測。"},"113":{"t":"90%","r":"86%","frac":"12/14","ana":"113年未達閾值90%，依據過去三年平均88%，團隊會議決議114年維 持原閾值。 分析：1名病人從急診直接住血腫科，未安排聽力檢查、1名病人經評 估採緩和治療，無做分期檢查之必要。 改善：團隊會議宣導診療指引共識。"},"114":{"t":"90%","r":"100%","frac":"18/18","ana":"NA"}},"displayYears":[112,113,114],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"NA","t112":"90%","r112":"100%","frac112":"21/21","t113":"90%","r113":"86%","frac113":"12/14","t114":"90%","r114":"100%","frac114":"18/18","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"}]}];
 var _sheetUrl = ''; // filled by exportSurveyFile()
 
 let state={name:'',role:'',currentGroup:0,groups:[],responses:{},adminLinks:{}};
@@ -466,24 +465,8 @@ function buildCard(ind){
     if(ind.years){ Object.keys(ind.years).map(Number).forEach(function(y){ if(_f.indexOf(y)===-1&&(ind.years[String(y)].t||ind.years[String(y)].r)) _f.push(y); }); _f.sort(function(a,b){return a-b;}); }
     return _f.length ? _f.slice(-4) : [112,113,114,115];
   })();
-  // _indResultYr: latest year with r (execution result)
-  const _indResultYr = (function(){
-    var _ry=112;
-    (function(){var _y=[];for(var _i=112;_i<=200;_i++)_y.push(_i);return _y;})().forEach(function(y){
-      if(ind['r'+y]&&String(ind['r'+y]).trim()) _ry=y;
-    });
-    if(ind.years) Object.keys(ind.years).forEach(function(y){ if(ind.years[y].r&&String(ind.years[y].r).trim()) _ry=Math.max(_ry,Number(y)); });
-    return _ry;
-  })();
-  // _indThreshYr: latest year with t (threshold) — independent of r
-  const _indThreshYr = (function(){
-    var _ty=112;
-    (function(){var _y=[];for(var _i=112;_i<=200;_i++)_y.push(_i);return _y;})().forEach(function(y){
-      if(ind['t'+y]&&String(ind['t'+y]).trim()) _ty=y;
-    });
-    if(ind.years) Object.keys(ind.years).forEach(function(y){ if(ind.years[y].t&&String(ind.years[y].t).trim()) _ty=Math.max(_ty,Number(y)); });
-    return _ty;
-  })();
+  const _indResultYr = _indDyrs.length >= 2 ? _indDyrs[_indDyrs.length-2] : (_indDyrs[0]||114);
+  const _indThreshYr = _indDyrs.length >= 1 ? _indDyrs[_indDyrs.length-1] : 115;
 
   return `
 <div class="indicator-card" id="card-${ind.id}">
