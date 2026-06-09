@@ -250,6 +250,12 @@ var _S2='PCFET0NUWVBFIGh0bWw+PCEtLSBTVVJWRVlfVkVSU0lPTjogbWVldGluZ1VybC12MyAtLT4
 function _dec(b){var bin=atob(b),bytes=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder("utf-8").decode(bytes);}
 
 var MNM=["陳龍","林芊芊","陳淑惠","莊世玟","趙祖怡","黃瑋妮"];
+// Capture default threshold values before any localStorage override
+window._DEFAULT_GROUPS_THRESH = (function(){
+  var m = {};
+  GROUPS.forEach(function(g){ if(!g.indicators) return; g.indicators.forEach(function(ind){ m[ind.id] = ind; }); });
+  return m;
+})();
 var MMED=["李明哲","張宜崴","林哲銘","楊哲銘","馮博皓","沈宛真","宋睿祥","劉惠文","溫國璋","蔡若婷","蔡易傑","李秋桂","李國隆","李明憲","徐嘉鴻","哈多吉","李文生","趙祖怡"];
 var cg="nm";
 var asgn={};
@@ -502,6 +508,8 @@ function mkHTML(member,ids,meetingLinksArg){
       var isNM=ids.every(function(id){return id.charAt(0)==="q";});
 
       // Filter only the selected indicators from GROUPS
+      // Use pre-captured default threshold map (captured before localStorage override)
+      var _defThreshMap = window._DEFAULT_GROUPS_THRESH || {};
       var filtered=[];
       GROUPS.forEach(function(g){
         // Only include groups matching the role
@@ -510,7 +518,20 @@ function mkHTML(member,ids,meetingLinksArg){
         var fi=g.indicators.filter(function(ind){return ids.indexOf(ind.id)>-1;});
         if(fi.length){
           var gc=JSON.parse(JSON.stringify(g));
-          gc.indicators=fi; gc.total=fi.length;
+          // Backfill any missing threshold fields from HTML defaults
+          gc.indicators=fi.map(function(ind){
+            var def=_defThreshMap[ind.id];
+            if(!def) return ind;
+            var merged=JSON.parse(JSON.stringify(ind));
+            for(var y=112;y<=200;y++){
+              var tf='t'+y;
+              if((!merged[tf]||!String(merged[tf]).trim()) && def[tf] && String(def[tf]).trim()){
+                merged[tf]=def[tf];
+              }
+            }
+            return merged;
+          });
+          gc.total=gc.indicators.length;
           filtered.push(gc);
         }
       });
@@ -519,7 +540,7 @@ function mkHTML(member,ids,meetingLinksArg){
       // Decode survey template
       var html=_dec(isNM?_S1:_S2);
 
-      // Replace GROUPS
+      // Replace GROUPS — also backfill missing threshold fields from defaults
       var gStart=html.indexOf("const GROUPS = [");
       if(gStart>-1){
         var depth=0; var pos=gStart+15;
@@ -529,7 +550,22 @@ function mkHTML(member,ids,meetingLinksArg){
           pos++;
         }
         var gEnd=html.indexOf(";",pos)+1;
-        html=html.substring(0,gStart)+"const GROUPS = "+JSON.stringify(GROUPS)+";"+html.substring(gEnd);
+        // Backfill GROUPS too
+        var _groupsToInject = JSON.parse(JSON.stringify(GROUPS));
+        _groupsToInject.forEach(function(g){
+          if(!g.indicators) return;
+          g.indicators.forEach(function(ind){
+            var def=_defThreshMap[ind.id];
+            if(!def) return;
+            for(var y=112;y<=200;y++){
+              var tf='t'+y;
+              if((!ind[tf]||!String(ind[tf]).trim()) && def[tf] && String(def[tf]).trim()){
+                ind[tf]=def[tf];
+              }
+            }
+          });
+        });
+        html=html.substring(0,gStart)+"const GROUPS = "+JSON.stringify(_groupsToInject)+";"+html.substring(gEnd);
       }
 
 
