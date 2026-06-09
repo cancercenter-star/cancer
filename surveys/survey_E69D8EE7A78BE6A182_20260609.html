@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>[v-checkDone] 癌症品質指標審查－醫療委員 第2組</title>
+<title>[v-checkDone] 癌症品質指標審查－非醫療委員 第1組</title>
 <style>
 :root{
   --teal:#006D77;--teal-dark:#004E56;--teal-light:#83C5BE;--teal-bg:#EDF6F7;
@@ -166,43 +166,31 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
 <body>
 
 <!-- ═══ PAGE: LANDING ═══ -->
-<div id="page-landing" class="page">
+<div id="page-landing" class="page active">
   <div class="landing">
     <div class="landing-logo">
       <div class="hospital">TMU-SHH 雙和醫院</div>
       <div class="title">癌症品質指標<br>委員審查系統</div>
-      <div class="subtitle">醫療委員 第2組｜<span id="survey-subtitle-years"></span></div>
+      <div class="subtitle">非醫療委員 第1組｜<span id="survey-subtitle-years"></span></div>
     </div>
     <div class="landing-card">
       <div style="background:var(--teal-bg);border:1.5px solid var(--teal-light);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
-        <span style="font-size:28px">🏥</span>
+        <span style="font-size:28px">💊</span>
         <div>
-          <div style="font-size:14px;font-weight:700;color:var(--teal-dark)">醫療委員 第2組</div>
-          <div style="font-size:12px;color:var(--gray);margin-top:2px">診斷期 → 完治率｜共8個功能小組</div>
+          <div style="font-size:14px;font-weight:700;color:var(--teal-dark)">非醫療委員 第1組</div>
+          <div style="font-size:12px;color:var(--gray);margin-top:2px">抗癌藥物 → 心理腫瘤｜共7個功能小組</div>
         </div>
       </div>
       <div class="field-group">
         <label class="field-label">委員姓名 <span style="color:var(--red)">*</span></label>
         <select id="input-name" class="field-input" onchange="onNameChange()">
           <option value="">— 請選擇姓名 —</option>
-          <option value="李明哲">李明哲</option>
-          <option value="張宜崴">張宜崴</option>
-          <option value="林哲銘">林哲銘</option>
-          <option value="楊哲銘">楊哲銘</option>
-          <option value="馮博皓">馮博皓</option>
-          <option value="沈宛真">沈宛真</option>
-          <option value="宋睿祥">宋睿祥</option>
-          <option value="劉惠文">劉惠文</option>
-          <option value="溫國璋">溫國璋</option>
-          <option value="蔡若婷">蔡若婷</option>
-          <option value="李秋桂">李秋桂</option>
-          <option value="李國隆">李國隆</option>
-          <option value="李明憲">李明憲</option>
-          <option value="徐嘉鴻">徐嘉鴻</option>
-          <option value="哈多吉">哈多吉</option>
-          <option value="李文生">李文生</option>
+          <option value="陳龍">陳龍</option>
+          <option value="林芊芊">林芊芊</option>
+          <option value="陳淑惠">陳淑惠</option>
+          <option value="莊世玟">莊世玟</option>
           <option value="趙祖怡">趙祖怡</option>
-          <option value="蔡易杰">蔡易杰</option>
+          <option value="黃瑋妮">黃瑋妮</option>
         </select>
       </div>
       <button class="btn-start" id="btn-start" onclick="startSurvey()" disabled>開始填寫 →</button>
@@ -215,7 +203,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#F0F4
 <!-- ═══ PAGE: SURVEY ═══ -->
 <div id="page-survey" class="page">
   <div class="topbar">
-    <div class="topbar-title">癌症品質指標審查｜醫療委員 第2組</div>
+    <div class="topbar-title">癌症品質指標審查｜非醫療委員 第1組</div>
     <div id="autosave-indicator" style="color:#83C5BE;font-size:12px;opacity:0;transition:opacity .5s">✓ 已自動存取</div>
     <div class="topbar-right">
       <span id="user-badge" class="badge">委員</span>
@@ -277,8 +265,8 @@ const GROUPS = [{"id":"q1","name":"Q1 抗癌藥物安全組","type":"non-medical
 // ══════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════
-var MEETING_LINKS = {"m1-1":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-2":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing","m1-20":"https://drive.google.com/file/d/1LVhM4x6rlAGh6q7_ZSPjw1Zjx2uf4kw0/view?usp=sharing"}; // runtime-populated
-var _presetMember='李秋桂';var _bakedGroups = [{"id":"m1","name":"M1 診斷期遵循率","type":"medical","total":3,"missed":0,"lowered":0,"maintained":21,"raised":0,"basis":"C","indicators":[{"id":"m1-1","no":"1","cancer":"口腔癌","name":"診斷期遵行率－口腔癌","attr":"正","change":"","years":{"112":{"t":"90%","r":"82%","frac":"62/76","ana":"110、111年執行年成果：83% ( 54/65 )、 90% ( 66/73 )，平均值85%；112年未達閾值90%，本團隊113年閾值維持90%持續監測。\r\n\r\n分析：1名術後診斷，拒絕會診營養師、6名採緩和治療，拒絕分期檢查、7名因害怕及經濟因素拒絕胃鏡。\r\n\r\n分析結果：病況因素、病人意願因素。\r\n\r\n改善：病人衛教、轉介社工協助。"},"113":{"t":"90%","r":"69%","frac":"44/64","ana":"113年未達閾值90%，依據過去三年平均80%，團隊會議決議114年維 持原閾值。 分析：14名病人未執行胃鏡、4名病人未會診耳鼻喉科、1名病人未會 診牙科、1名病人未會診營養師。 改善：經一校參院診療指引修訂會議決議，自114年將胃鏡列為選擇性 檢查、團隊會議宣導診療指引共識。"},"114":{"t":"90%","r":"88%","frac":"74/84","ana":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。\r\n 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。\r\n 二名病人無法配合檢查與會診。\r\n 改善：已建立檢查套餐，加強宣導。"}},"displayYears":[112,113,114],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"四名病人未安排會診(復健科*3、耳鼻喉科*1)。\r\n 四名病人採緩和治療，經主治醫師評估，無安排檢查之必要。\r\n 二名病人無法配合檢查與會診。\r\n 改善：已建立檢查套餐，加強宣導。","t112":"90%","r112":"82%","frac112":"62/76","t113":"90%","r113":"69%","frac113":"44/64","t114":"90%","r114":"88%","frac114":"74/84","t115":"90%","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-2","no":"2","cancer":"鼻咽癌","name":"診斷期遵行率－鼻咽癌","attr":"正","change":"","years":{"112":{"t":"90%","r":"100%","frac":"21/21","ana":"110、111年執行年成果：100% ( 10/10 )、 94% ( 16/17 ) ，平均值98%；112年已達閾值90%，本團隊113年閾值維持90%持續監測。"},"113":{"t":"90%","r":"86%","frac":"12/14","ana":"113年未達閾值90%，依據過去三年平均88%，團隊會議決議114年維 持原閾值。 分析：1名病人從急診直接住血腫科，未安排聽力檢查、1名病人經評 估採緩和治療，無做分期檢查之必要。 改善：團隊會議宣導診療指引共識。"},"114":{"t":"90%","r":"100%","frac":"18/18","ana":"NA"}},"displayYears":[112,113,114],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"NA","t112":"90%","r112":"100%","frac112":"21/21","t113":"90%","r113":"86%","frac113":"12/14","t114":"90%","r114":"100%","frac114":"18/18","t115":"92%","meetingUrl":"https://drive.google.com/file/d/1imJ7tFo-OualVYtlRde25fXfz-eeXO_k/view?usp=sharing"},{"id":"m1-20","no":"20","cancer":"卵巢癌","name":"診斷期遵行率－卵巢癌","attr":"正","change":"","years":{"112":{"t":"90%","r":"100%","frac":"18/18","ana":"110、111年執行年成果：96% ( 29/30 )、96% ( 25/26 )，平均值97%；112年已達閾值90%，本團隊113年閾值往上調至92%持續監測。"},"113":{"t":"92%","r":"100%","frac":"11/11","ana":"113年已達閾值92%，依據過去三年平均99%，團隊會議決議114年提 高閾值。"},"114":{"t":"94%","r":"100%","frac":"29/29","ana":"NA"}},"displayYears":[112,113,114],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"NA","t112":"90%","r112":"100%","frac112":"18/18","t113":"92%","r113":"100%","frac113":"11/11","t114":"94%","r114":"100%","frac114":"29/29","t115":"94%","meetingUrl":"https://drive.google.com/file/d/1LVhM4x6rlAGh6q7_ZSPjw1Zjx2uf4kw0/view?usp=sharing"}]}];
+var MEETING_LINKS = {}; // runtime-populated
+var _presetMember='李秋桂';var _bakedGroups = [{"id":"q4","name":"Q4 影像診斷品質提升組","type":"non-medical","total":2,"missed":0,"lowered":0,"maintained":20,"raised":0,"basis":"C","indicators":[{"id":"q4-11","no":"11","cancer":"腎細胞癌","name":"初始套用率－腎細胞癌","attr":"正","change":"","years":{"112":{"t":"80%","r":"84.6%","frac":"22/26","ana":"無異動"},"113":{"t":"80%","r":"71.4%","frac":"","ana":"經分析有些早期case經切片才發現 \r\n改善：\r\n1. 提高初次閱片的敏感度 \r\n2. 一些複雜性囊腫也先做分期"},"114":{"t":"80%","r":"79.5%","frac":"","ana":"1.持續宣導同仁鼓勵套用\r\n 2.病人腎功能不佳，導致單憑不打顯影劑的影像不足判斷"},"115":{"t":"80%","r":"79.5%","frac":"","ana":"1.持續宣導同仁鼓勵套用\r\n 2.病人腎功能不佳，導致單憑不打顯影劑的影像不足判斷"},"116":{"t":"80%","r":"79.5%","frac":"","ana":"1.持續宣導同仁鼓勵套用\r\n 2.病人腎功能不佳，導致單憑不打顯影劑的影像不足判斷"}},"displayYears":[113,114,115,116],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"1.持續宣導同仁鼓勵套用\r\n 2.病人腎功能不佳，導致單憑不打顯影劑的影像不足判斷","t112":"80%","r112":"84.6%","frac112":"22/26","t113":"80%","r113":"71.4%","frac113":"","t114":"80%","r114":"79.5%","frac114":"","t115":"80%","r115":"79.5%","frac115":"","t116":"80%","r116":"79.5%","frac116":"","meetingUrl":""},{"id":"q4-14","no":"14","cancer":"子宮內膜癌","name":"初始套用率－子宮內膜癌","attr":"正","change":"","years":{"112":{"t":"70%","r":"88.9%","frac":"32/36","ana":"無異動"},"113":{"t":"70%","r":"86.1%","frac":"","ana":""},"114":{"t":"70%","r":"77.1%","frac":"","ana":"持續宣導同仁鼓勵套用"},"115":{"t":"70%","r":"77.1%","frac":"","ana":"持續宣導同仁鼓勵套用"},"116":{"t":"70%","r":"77.1%","frac":"","ana":"持續宣導同仁鼓勵套用"}},"displayYears":[113,114,115,116],"missed":"","adj":"keep","basis":"C","reason":"E","analysis":"持續宣導同仁鼓勵套用","t112":"70%","r112":"88.9%","frac112":"32/36","t113":"70%","r113":"86.1%","frac113":"","t114":"70%","r114":"77.1%","frac114":"","t115":"70%","r115":"77.1%","frac115":"","t116":"70%","r116":"77.1%","frac116":"","meetingUrl":""}]}];
 var _sheetUrl = ''; // filled by exportSurveyFile()
 
 let state={name:'',role:'',currentGroup:0,groups:[],responses:{},adminLinks:{}};
@@ -293,19 +281,37 @@ function getGroups(){
 // ══════════════════════════════════════════════════════
 // LANDING
 // ══════════════════════════════════════════════════════
-// ── Role locked: 醫療委員 第2組 ──
-state.role = 'medical';
+// ── Role locked: 非醫療委員 第1組 ──
+state.role = 'non-medical';
+
+// Show subtitle years on landing page immediately
+(function(){
+  var gs = (typeof _bakedGroups!=='undefined'&&_bakedGroups) ? _bakedGroups : (typeof GROUPS!=='undefined'?GROUPS:[]);
+  var latestResult=112, latestThresh=113;
+  gs.forEach(function(g){ if(!g.indicators) return;
+    g.indicators.forEach(function(ind){
+      (function(){var _y=[];for(var _i=112;_i<=200;_i++)_y.push(_i);return _y;})().forEach(function(y){
+        if(ind['r'+y]&&String(ind['r'+y]).trim()) latestResult=Math.max(latestResult,y);
+        if(ind['t'+y]&&String(ind['t'+y]).trim()) latestThresh=Math.max(latestThresh,y);
+      });
+    });
+  });
+  window.addEventListener('DOMContentLoaded',function(){
+    var sub=document.getElementById('survey-subtitle-years');
+    if(sub) sub.textContent=latestResult+'年執行成果 & '+latestThresh+'年閾值審查';
+  });
+})();
 
 function onNameChange(){
   state.name = document.getElementById('input-name').value;
-  state.role = 'medical';
+  state.role = 'non-medical';
   document.getElementById('btn-start').disabled = !state.name;
 }
 function checkStart(){
   document.getElementById('btn-start').disabled = !state.name;
 }
 function startSurvey(){
-  if(!state.role) state.role = 'medical';
+  if(!state.role) state.role = 'non-medical';
   if(!state.name) return;
   state.groups = getGroups();
   state.currentGroup = 0;
@@ -466,8 +472,15 @@ function buildCard(ind){
     if(ind.years){ Object.keys(ind.years).map(Number).forEach(function(y){ if(_f.indexOf(y)===-1&&(ind.years[String(y)].t||ind.years[String(y)].r)) _f.push(y); }); _f.sort(function(a,b){return a-b;}); }
     return _f.length ? _f.slice(-4) : [112,113,114,115];
   })();
-  // _indResultYr: year before threshold year (threshold year - 1)
-  const _indResultYr = _indThreshYr - 1;
+  // _indResultYr: latest year with r (execution result)
+  const _indResultYr = (function(){
+    var _ry=112;
+    (function(){var _y=[];for(var _i=112;_i<=200;_i++)_y.push(_i);return _y;})().forEach(function(y){
+      if(ind['r'+y]&&String(ind['r'+y]).trim()) _ry=y;
+    });
+    if(ind.years) Object.keys(ind.years).forEach(function(y){ if(ind.years[y].r&&String(ind.years[y].r).trim()) _ry=Math.max(_ry,Number(y)); });
+    return _ry;
+  })();
   // _indThreshYr: latest year with t (threshold) — independent of r
   const _indThreshYr = (function(){
     var _ty=112;
@@ -534,7 +547,7 @@ function buildCard(ind){
     </div>
   </div>
   <div class="analysis-section">
-    <div class="analysis-title">${_indThreshYr - 1}年未達閾值分析及改善 <span style="font-size:14px;font-weight:600;color:#006D77">（團隊提供）</span></div>
+    <div class="analysis-title">${(function(){ var _f=[]; (function(){var _y=[];for(var _i=112;_i<=200;_i++)_y.push(_i);return _y;})().forEach(function(y){ if(ind['r'+y]&&String(ind['r'+y]).trim()) _f.push(y); }); return _f.length>=1?_f[_f.length-1]:114; })()}年未達閾值分析及改善 <span style="font-size:14px;font-weight:600;color:#006D77">（小組提供）</span></div>
     <div class="analysis-text">${ind.analysis ? ind.analysis.replace(/\n/g,'<br>') : '無'}</div>
   </div>
   
@@ -547,20 +560,46 @@ function buildCard(ind){
         <button class="vote-btn disagree" id="vbtn-disc-dis-${ind.id}" onclick="castDiscVote('${ind.id}',false)">✘ 否</button>
       </div>
     </div>
-    <div class="vote-block">
-      <div class="vote-question">✍️ ${_indResultYr}年未達閾值分析及改善，內容是否合理？</div>
-      <div class="vote-options">
-        <button class="vote-btn agree" id="vbtn-analy-agree-${ind.id}" onclick="castVote('${ind.id}','analy',true)">✔ 合理</button>
-        <button class="vote-btn disagree" id="vbtn-analy-dis-${ind.id}" onclick="castVote('${ind.id}','analy',false)">✘ 不合理</button>
-      </div>
-      <div class="disagree-sub" id="dsub-analy-${ind.id}">
-        <div class="disagree-sub-label">請選擇不合理的原因：</div>
-        <div class="sub-options">
-          ${analySubs}
-          <button class="sub-opt" id="sub-analy-${ind.id}-3" onclick="selectSubOpt('${ind.id}','analy',3,true)"><span class="sub-opt-dot"></span>其他（請於下方意見欄說明）</button>
-        </div>
-      </div>
-    </div>
+    ${(function(){
+      // N年 = _indThreshYr（最新有閾值的年份）
+      // 前一年 = N-1年
+      var _prevYr = _indThreshYr - 1;
+      var _prevT = ind['t'+_prevYr] || '';
+      var _prevR = ind['r'+_prevYr] || '';
+      var _attr = ind.attr || '正';
+      // 判斷前一年是否未達閾值（紅色）
+      var _prevMissed = (function(){
+        var tNum = parseFloat(String(_prevT).replace(/[^\d.]/g,''));
+        var rNum = parseFloat(String(_prevR).replace(/[^\d.]/g,''));
+        if(isNaN(tNum)||isNaN(rNum)||!_prevR.trim()) return false;
+        return _attr==='負' ? rNum > tNum : rNum < tNum;
+      })();
+      var _prevAnalysis = (ind.analysis||'').trim();
+      if(!_prevMissed){
+        // 前一年已達標，不需要分析題
+        return '';
+      }
+      // 前一年未達標，需顯示分析投票題
+      var _analyWarn = _prevAnalysis.length < 5
+        ? '<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400E;margin-bottom:8px">⚠️ 注意：' + _prevYr + '年未達閾值，但尚未填寫分析說明，請團隊確認後再投票。</div>'
+        : '';
+      return '<div class="vote-block">'
+        + _analyWarn
+        + '<div class="vote-question">✍️ ' + _prevYr + '年未達閾值分析及改善，內容是否合理？</div>'
+        + '<div style="background:#FFF8F8;border-left:4px solid var(--red);padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:10px;font-size:14px;color:var(--text);line-height:1.7">'
+        + (_prevAnalysis || '<span style="color:#9CA3AF;font-style:italic">（尚無分析說明）</span>')
+        + '</div>'
+        + '<div class="vote-options">'
+        + '<button class="vote-btn agree" id="vbtn-analy-agree-' + ind.id + '" onclick="castVote(\'' + ind.id + '\',\'analy\',true)">✔ 合理</button>'
+        + '<button class="vote-btn disagree" id="vbtn-analy-dis-' + ind.id + '" onclick="castVote(\'' + ind.id + '\',\'analy\',false)">✘ 不合理</button>'
+        + '</div>'
+        + '<div class="disagree-sub" id="dsub-analy-' + ind.id + '">'
+        + '<div class="disagree-sub-label">請選擇不合理的原因：</div>'
+        + '<div class="sub-options">'
+        + analySubs
+        + '<button class="sub-opt" id="sub-analy-' + ind.id + '-3" onclick="selectSubOpt(\'' + ind.id + '\',\'analy\',3,true)"><span class="sub-opt-dot"></span>其他（請於下方意見欄說明）</button>'
+        + '</div></div></div>';
+    })()}
     <div class="vote-block">
       <div class="vote-question">📊 ${_indThreshYr}年閾值調整（${adjLbl}）的合理性？</div>
       <div class="vote-options">
@@ -1597,7 +1636,7 @@ function updateNameDropdown(){
 
 
 // DISPATCH
-var DISPATCH_MEMBERS = ["李明哲","張宜崴","林哲銘","楊哲銘","馮博皓","沈宛真","宋睿祥","劉惠文","溫國璋","蔡若婷","蔡易傑","李秋桂","李國隆","李明憲","徐嘉鴻","哈多吉","李文生","趙祖怡"];
+var DISPATCH_MEMBERS = ["陳龍","林芊芊","陳淑惠","莊世玟","趙祖怡","黃瑋妮"];
 
 function renderDispatchTab() {
   var data;
@@ -1774,11 +1813,7 @@ function dispatchClear() {
   // Auto-start if dispatched
   if(typeof _bakedGroups!=='undefined'&&_bakedGroups&&_bakedGroups.length>0&&
      typeof _presetMember!=='undefined'&&_presetMember){
-    state.name=_presetMember; state.role='medical'; startSurvey();
-  } else {
-    // Show landing page (name selection)
-    var lp=document.getElementById('page-landing');
-    if(lp) lp.classList.add('active');
+    state.name=_presetMember; state.role='non-medical'; startSurvey();
   }
 })();
 
