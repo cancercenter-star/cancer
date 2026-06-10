@@ -128,7 +128,6 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#006D77;
   <div class="card-h"><span>📋</span><h2>指標派送</h2><span style="font-size:12px;opacity:.8">勾選指標 → 選委員 → 產生問卷</span></div>
   <div class="card-b">
     <div class="toolbar">
-      <button class="btn btn-o" onclick="ckAll(true)">☑ 全選</button>
       <button class="btn btn-o" onclick="ckAll(false)">☐ 全不選</button>
       <div style="width:1px;height:28px;background:#D1D5DB"></div>
       <label style="font-size:13px;font-weight:600;color:#6B7280">派送給：</label>
@@ -434,8 +433,10 @@ function renderList(){
         var ccl=ind.change.indexOf('刪除')>-1?'#C0392B':ind.change.indexOf('115')>-1?'#7C3AED':ind.change.indexOf('114')>-1?'#16A34A':'#B45309';
         chgBadge='<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:'+cbg+';color:'+ccl+';margin-right:4px;white-space:nowrap">'+ind.change+'</span>';
       }
+      // checked state comes only from selectedOrder, never from asgn
+      var isChecked = selectedOrder.indexOf(ind.id) > -1;
       h+="<label class='ir"+(who?" asgn":"")+"'>";
-      h+="<input type='checkbox' class='ic' data-id='"+ind.id+"' data-gid='"+g.id+"'"+(who?" checked":"")+">";
+      h+="<input type='checkbox' class='ic' data-id='"+ind.id+"' data-gid='"+g.id+"' data-indicator-id='"+ind.id+"'"+(isChecked?" checked":"")+" onchange='onIndicatorCheck(this,\""+ind.id+"\")'>";
       h+="<span class='ino'>"+ind.no+"</span>";
       h+="<span class='inm'>"+chgBadge+(ind.cancer?ind.cancer+" — ":"")+ind.name.substring(0,45)+"</span>";
       if(who)h+="<span class='itg'>✓ "+who+"</span>";
@@ -453,11 +454,42 @@ function togGrp(head){
 }
 function gChk(cb){
   var gid=cb.getAttribute("data-gid");
-  document.querySelectorAll(".ic[data-gid='"+gid+"']").forEach(function(c){c.checked=cb.checked;});
+  document.querySelectorAll(".ic[data-gid='"+gid+"']").forEach(function(c){
+    if(c.checked !== cb.checked){
+      c.checked=cb.checked;
+      onIndicatorCheck(c, c.getAttribute("data-indicator-id")||c.getAttribute("data-id"));
+    }
+  });
 }
 function ckAll(v){
+  // v is always false (全不選)
   document.querySelectorAll(".ic").forEach(function(cb){cb.checked=v;});
   document.querySelectorAll(".gh input[type=checkbox]").forEach(function(cb){cb.checked=v;});
+  if(!v){ selectedOrder=[]; renderSummary(); }
+}
+
+// ── Selected-order tracking ──
+var selectedOrder = [];
+
+function onIndicatorCheck(cb, indicatorId) {
+  if (cb.checked) {
+    selectedOrder = selectedOrder.filter(function(id){ return id !== indicatorId; });
+    selectedOrder.push(indicatorId);
+  } else {
+    selectedOrder = selectedOrder.filter(function(id){ return id !== indicatorId; });
+  }
+  renderSummary();
+}
+
+function renderSummary() {
+  var el = document.getElementById("gs");
+  if (!el) return;
+  if (selectedOrder.length === 0) {
+    el.textContent = "";
+  } else {
+    el.textContent = "已選 " + selectedOrder.length + " 項（依勾選順序）";
+    el.style.color = "#006D77";
+  }
 }
 function renderSum(){
   var ct={};
@@ -507,9 +539,25 @@ function renderAllRec(){
 function doGen(){
   var member=document.getElementById("sel-m").value;
   if(!member){alert("請選擇委員");return;}
-  var ids=[];
-  document.querySelectorAll(".ic:checked").forEach(function(cb){ids.push(cb.getAttribute("data-id"));});
-  if(!ids.length){alert("請先勾選至少一個指標");return;}
+
+  // Build ordered indicator list from selectedOrder
+  var selectedIndicators = [];
+  selectedOrder.forEach(function(id){
+    GROUPS.forEach(function(g){
+      var item = g.indicators.find(function(x){ return x.id === id; });
+      if(item){
+        selectedIndicators.push({
+          ind: item,
+          groupId: g.id,
+          groupName: g.name,
+          groupType: g.type
+        });
+      }
+    });
+  });
+  if(!selectedIndicators.length){alert("請先勾選要派送的指標");return;}
+
+  var ids = selectedIndicators.map(function(x){ return x.ind.id; });
 
   // Validate: all IDs must be same type (all q or all m)
   var hasQ=ids.some(function(id){return id.charAt(0)==="q";});
@@ -518,13 +566,25 @@ function doGen(){
 
   ids.forEach(function(id){asgn[id]=member;});
   localStorage.setItem("adm_asgn",JSON.stringify(asgn));
-  // Start with baked-in defaults, then overlay localStorage saves
+
   var _ml = Object.assign({}, MEETING_LINKS);
   try{ Object.assign(_ml, JSON.parse(localStorage.getItem("meetingLinks")||"{}")); }catch(e){}
-  mkHTML(member,ids,_ml);
-  renderList();renderSum();
+
+  // Pass ordered ids to mkHTML
+  mkHTML(member, ids, _ml, selectedOrder.slice());
+
+  // Clear selection after generation
+  selectedOrder = [];
+  document.querySelectorAll("input[type='checkbox'][data-indicator-id]").forEach(function(cb){
+    cb.checked = false;
+  });
+  document.querySelectorAll(".ic").forEach(function(cb){ cb.checked = false; });
+  document.querySelectorAll(".gh input[type=checkbox]").forEach(function(cb){ cb.checked = false; });
+  document.getElementById("sel-m").value = "";
+  renderSummary();
+  renderList(); renderSum();
 }
-function mkHTML(member,ids,meetingLinksArg){
+function mkHTML(member,ids,meetingLinksArg,orderedIds){
   var st=document.getElementById("gs");
   st.textContent="⏳ 產生中…";st.style.color="#C8963E";
   setTimeout(function(){
@@ -532,34 +592,66 @@ function mkHTML(member,ids,meetingLinksArg){
       // Determine: q=non-medical, m=medical
       var isNM=ids.every(function(id){return id.charAt(0)==="q";});
 
-      // Filter only the selected indicators from GROUPS
-      // Use pre-captured default threshold map (captured before localStorage override)
+      // Use orderedIds if provided, else fall back to ids order
+      var order = (orderedIds && orderedIds.length) ? orderedIds : ids;
+
+      // Filter only the selected indicators from GROUPS, preserving orderedIds sequence
       var _defThreshMap = window._DEFAULT_GROUPS_THRESH || {};
-      var filtered=[];
+
+      // Build a flat map: id -> {indicator, group}
+      var indMap = {};
       GROUPS.forEach(function(g){
-        // Only include groups matching the role
         if(isNM && g.type!=="non-medical") return;
         if(!isNM && g.type!=="medical") return;
-        var fi=g.indicators.filter(function(ind){return ids.indexOf(ind.id)>-1;});
-        if(fi.length){
-          var gc=JSON.parse(JSON.stringify(g));
-          // Backfill any missing threshold fields from HTML defaults
-          gc.indicators=fi.map(function(ind){
-            var def=_defThreshMap[ind.id];
-            if(!def) return ind;
-            var merged=JSON.parse(JSON.stringify(ind));
-            for(var y=112;y<=200;y++){
-              var tf='t'+y;
-              if((!merged[tf]||!String(merged[tf]).trim()) && def[tf] && String(def[tf]).trim()){
-                merged[tf]=def[tf];
-              }
+        g.indicators.forEach(function(ind){
+          if(ids.indexOf(ind.id)>-1){
+            indMap[ind.id] = { ind: ind, group: g };
+          }
+        });
+      });
+
+      // Build filtered groups respecting orderedIds sequence
+      // Each group appears once; its indicators are ordered by orderedIds
+      var seenGroups = {};
+      var groupOrder = []; // ordered group ids
+      var groupInds  = {}; // groupId -> [ordered indicators]
+      order.forEach(function(id){
+        var entry = indMap[id];
+        if(!entry) return;
+        var gid = entry.group.id;
+        if(!seenGroups[gid]){
+          seenGroups[gid] = true;
+          groupOrder.push(gid);
+          groupInds[gid] = [];
+        }
+        // Backfill threshold fields from defaults
+        var ind = entry.ind;
+        var def = _defThreshMap[ind.id];
+        if(def){
+          var merged = JSON.parse(JSON.stringify(ind));
+          for(var y=112;y<=200;y++){
+            var tf='t'+y;
+            if((!merged[tf]||!String(merged[tf]).trim()) && def[tf] && String(def[tf]).trim()){
+              merged[tf]=def[tf];
             }
-            return merged;
-          });
-          gc.total=gc.indicators.length;
-          filtered.push(gc);
+          }
+          groupInds[gid].push(merged);
+        } else {
+          groupInds[gid].push(JSON.parse(JSON.stringify(ind)));
         }
       });
+
+      // Build filtered array in group order
+      var filtered = [];
+      groupOrder.forEach(function(gid){
+        var g = GROUPS.find(function(x){ return x.id === gid; });
+        if(!g) return;
+        var gc = JSON.parse(JSON.stringify(g));
+        gc.indicators = groupInds[gid];
+        gc.total = gc.indicators.length;
+        filtered.push(gc);
+      });
+
       if(!filtered.length){st.textContent="❌ 無對應指標";st.style.color="#C0392B";return;}
 
       // Decode survey template
@@ -686,8 +778,8 @@ function mkHTML(member,ids,meetingLinksArg){
   },100);
 }
 function reDL(member){
-  var ids=Object.keys(asgn).filter(function(k){return asgn[k]===member;});
-  if(ids.length)mkHTML(member,ids);
+  var ids=Object.keys(asgn).filter(function(k){return asgn[k]===member&&k.indexOf("__link_")!==0;});
+  if(ids.length) mkHTML(member,ids,undefined,ids);
 }
 function clrAll(){
   if(confirm("確定清除所有派送記錄？")){
@@ -1417,27 +1509,11 @@ function exportCSV() {
     alert("尚無填寫資料可匯出");
     return;
   }
-  // 對應問卷裡 DISAGREE_ANALY（index 0–2）和第 4 顆按鈕「其他」（index 3）
-  var ANALY_OPTS = [
-    "原因分析不完整，尚有其他因素未納入",
-    "改善措施執行力不足，需強化落實機制",
-    "需加強追蹤與回饋機制，確認改善成效",
-    "其他（請於下方意見欄說明）"
-  ];
-  // 對應問卷裡 DISAGREE_THRESH（index 0–2）和第 4 顆按鈕「其他」（index 3）
-  var THRESH_OPTS = [
-    "建議維持原閾值，不應下修",
-    "下修幅度不足，建議進一步調降",
-    "閾值設定依據需補充說明或佐證資料",
-    "其他（請於下方意見欄說明）"
-  ];
   var lines = [];
   lines.push([
     "委員","填寫時間","問卷檔名","指標ID",
-    "會議紀錄是否討論",
-    "分析及改善是否合理","分析不合理原因",
-    "閾值調整是否合理","閾值不合理原因",
-    "其他意見或建議修正"
+    "會議紀錄是否討論","最新執行年未達閾值分析及改善是否合理",
+    "最新閾值年閾值調整是否合理","其他意見或建議修正"
   ]);
   saved.forEach(function(r) {
     var name = r.name || r.member || r["委員"] || r["姓名"] || "";
@@ -1452,19 +1528,11 @@ function exportCSV() {
       var analyAgree =
         ans.analyAgree === true  || ans.analyAgree === "true"  || ans.analyAgree === "合理"   ? "合理"   :
         ans.analyAgree === false || ans.analyAgree === "false" || ans.analyAgree === "不合理" ? "不合理" : "";
-      var analyReason = "";
-      if (analyAgree === "不合理" && ans.analySubIdx !== undefined && ans.analySubIdx !== null) {
-        analyReason = ANALY_OPTS[+ans.analySubIdx] || "";
-      }
       var threshAgree =
         ans.threshAgree === true  || ans.threshAgree === "true"  || ans.threshAgree === "合理"   ? "合理"   :
         ans.threshAgree === false || ans.threshAgree === "false" || ans.threshAgree === "不合理" ? "不合理" : "";
-      var threshReason = "";
-      if (threshAgree === "不合理" && ans.threshSubIdx !== undefined && ans.threshSubIdx !== null) {
-        threshReason = THRESH_OPTS[+ans.threshSubIdx] || "";
-      }
       var comment = ans.comment || ans.note || ans.remark || ans["其他意見"] || "";
-      lines.push([name, time, file, indId, discussed, analyAgree, analyReason, threshAgree, threshReason, comment]);
+      lines.push([name, time, file, indId, discussed, analyAgree, threshAgree, comment]);
     });
   });
   var csv = lines.map(function(row) {
