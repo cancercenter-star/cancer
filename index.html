@@ -407,13 +407,20 @@ function swGrp(g){
   ["nm","med","all"].forEach(function(t){
     document.getElementById("t-"+t).className="tab"+(t===g?" on":"");
   });
+  // 切換 tab 時清空本次勾選，避免不同 tab 的指標混入 selectedOrder
+  selectedOrder=[];
   buildSel();renderList();
-  // Clear any stale selection count
-  document.getElementById("gs").textContent="";
+  renderSummary();
 }
 function renderList(){
   if(cg==="all"){renderAllRec();return;}
   var data=GROUPS.filter(function(g){return cg==="nm"?g.type==="non-medical":g.type==="medical";});
+
+  // 清除 selectedOrder 中不屬於當前 tab 的殘留 id
+  var validForTab = new Set();
+  data.forEach(function(g){ g.indicators.forEach(function(ind){ validForTab.add(ind.id); }); });
+  selectedOrder = selectedOrder.filter(function(id){ return validForTab.has(id); });
+
   var el=document.getElementById("il");
   var h="";
   data.forEach(function(g){
@@ -485,13 +492,9 @@ function renderSummary() {
 }
 
 function ckAll(flag) {
-  // flag is always false (全不選)；全選已移除
-  document.querySelectorAll("input[type='checkbox'][data-indicator-id]").forEach(function(cb){
-    cb.checked = false;
-  });
-  document.querySelectorAll(".gh input[type=checkbox]").forEach(function(cb){ cb.checked = false; });
   selectedOrder = [];
   renderSummary();
+  renderList();  // 重繪確保所有 checkbox 狀態與 selectedOrder 一致
 }
 
 function resetCurrentDispatch() {
@@ -503,6 +506,8 @@ function resetCurrentDispatch() {
   var sel = document.getElementById("sel-m");
   if (sel) sel.value = "";
   renderSummary();
+  renderList();  // reset 後才重繪，確保 checkbox 全部清空
+  renderSum();
 }
 function renderSum(){
   var ct={};
@@ -553,15 +558,21 @@ function doGen(){
   var member=document.getElementById("sel-m").value;
   if(!member){alert("請選擇委員");return;}
 
-  // 唯一來源：selectedOrder（依勾選順序）
   if(!selectedOrder.length){alert("請先勾選要派送的指標");return;}
 
-  // Validate type: all q or all m
-  var hasQ=selectedOrder.some(function(id){return id.charAt(0)==="q";});
-  var hasM=selectedOrder.some(function(id){return id.charAt(0)==="m";});
-  if(hasQ&&hasM){alert("請勿同時選擇非醫療(Q)和醫療(M)的指標");return;}
+  // 嚴格過濾：只取目前 tab 實際存在於 DOM 的 checkbox（避免殘留 id）
+  var validIds = new Set();
+  document.querySelectorAll("input[type='checkbox'][data-indicator-id]:checked").forEach(function(cb){
+    validIds.add(cb.getAttribute("data-indicator-id"));
+  });
+  // 用 selectedOrder 的順序，但只保留 DOM 中確實勾選的
+  var ids = selectedOrder.filter(function(id){ return validIds.has(id); });
 
-  var ids = selectedOrder.slice(); // snapshot
+  if(!ids.length){alert("請先勾選要派送的指標");return;}
+
+  var hasQ=ids.some(function(id){return id.charAt(0)==="q";});
+  var hasM=ids.some(function(id){return id.charAt(0)==="m";});
+  if(hasQ&&hasM){alert("請勿同時選擇非醫療(Q)和醫療(M)的指標");return;}
 
   ids.forEach(function(id){asgn[id]=member;});
   localStorage.setItem("adm_asgn",JSON.stringify(asgn));
@@ -569,8 +580,8 @@ function doGen(){
   var _ml = Object.assign({}, MEETING_LINKS);
   try{ Object.assign(_ml, JSON.parse(localStorage.getItem("meetingLinks")||"{}")); }catch(e){}
 
-  mkHTML(member, ids, _ml, ids.slice()); // pass orderedIds
-  renderList(); renderSum();
+  mkHTML(member, ids, _ml, ids.slice());
+  // renderList/renderSum 已移至 resetCurrentDispatch 裡，由 mkHTML callback 觸發
 }
 function mkHTML(member,ids,meetingLinksArg,orderedIds){
   var st=document.getElementById("gs");
