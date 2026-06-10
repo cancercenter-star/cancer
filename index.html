@@ -1417,19 +1417,19 @@ function exportCSV() {
     alert("尚無填寫資料可匯出");
     return;
   }
-  // 分析不合理原因選項（與問卷 DISAGREE_ANALY 一致）
+  // 對應問卷裡 DISAGREE_ANALY（index 0–2）和第 4 顆按鈕「其他」（index 3）
   var ANALY_OPTS = [
     "原因分析不完整，尚有其他因素未納入",
     "改善措施執行力不足，需強化落實機制",
     "需加強追蹤與回饋機制，確認改善成效",
-    "其他"
+    "其他（請於下方意見欄說明）"
   ];
-  // 閾值不合理原因選項（與問卷 DISAGREE_THRESH 一致）
+  // 對應問卷裡 DISAGREE_THRESH（index 0–2）和第 4 顆按鈕「其他」（index 3）
   var THRESH_OPTS = [
     "建議維持原閾值，不應下修",
     "下修幅度不足，建議進一步調降",
     "閾值設定依據需補充說明或佐證資料",
-    "其他"
+    "其他（請於下方意見欄說明）"
   ];
   var lines = [];
   lines.push([
@@ -1452,26 +1452,16 @@ function exportCSV() {
       var analyAgree =
         ans.analyAgree === true  || ans.analyAgree === "true"  || ans.analyAgree === "合理"   ? "合理"   :
         ans.analyAgree === false || ans.analyAgree === "false" || ans.analyAgree === "不合理" ? "不合理" : "";
-      // 分析不合理原因：優先用文字，否則用 idx 對應選項
       var analyReason = "";
-      if (analyAgree === "不合理") {
-        if (ans.analySubText && String(ans.analySubText).trim()) {
-          analyReason = String(ans.analySubText).trim();
-        } else if (ans.analySubIdx !== undefined && ans.analySubIdx !== null) {
-          analyReason = ANALY_OPTS[+ans.analySubIdx] || "";
-        }
+      if (analyAgree === "不合理" && ans.analySubIdx !== undefined && ans.analySubIdx !== null) {
+        analyReason = ANALY_OPTS[+ans.analySubIdx] || "";
       }
       var threshAgree =
         ans.threshAgree === true  || ans.threshAgree === "true"  || ans.threshAgree === "合理"   ? "合理"   :
         ans.threshAgree === false || ans.threshAgree === "false" || ans.threshAgree === "不合理" ? "不合理" : "";
-      // 閾值不合理原因
       var threshReason = "";
-      if (threshAgree === "不合理") {
-        if (ans.threshSubText && String(ans.threshSubText).trim()) {
-          threshReason = String(ans.threshSubText).trim();
-        } else if (ans.threshSubIdx !== undefined && ans.threshSubIdx !== null) {
-          threshReason = THRESH_OPTS[+ans.threshSubIdx] || "";
-        }
+      if (threshAgree === "不合理" && ans.threshSubIdx !== undefined && ans.threshSubIdx !== null) {
+        threshReason = THRESH_OPTS[+ans.threshSubIdx] || "";
       }
       var comment = ans.comment || ans.note || ans.remark || ans["其他意見"] || "";
       lines.push([name, time, file, indId, discussed, analyAgree, analyReason, threshAgree, threshReason, comment]);
