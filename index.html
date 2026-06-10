@@ -266,8 +266,27 @@ try{var sm=JSON.parse(localStorage.getItem("members_nm")||"null");if(sm)MNM=sm;}
 try{var sm2=JSON.parse(localStorage.getItem("members_med")||"null");if(sm2)MMED=sm2;}catch(e){}
 
 // Load saved year settings
+// ── 顯示/匯入的年份範圍：目前只要 112–115。明年要納入 116 時，把 YEAR_MAX 改成 116 即可。──
+var YEAR_MIN = 112, YEAR_MAX = 115;
+function _clampYears(arr){
+  return (arr||[]).map(Number).filter(function(y){ return y>=YEAR_MIN && y<=YEAR_MAX; })
+    .sort(function(a,b){return a-b;}).map(String);
+}
+// 把超出範圍(>YEAR_MAX / <YEAR_MIN)的 t/r/frac 欄位從指標上清掉，避免殘留的 116 又冒出來
+function _stripOutOfRangeYears(groups){
+  (groups||[]).forEach(function(g){
+    (g.indicators||[]).forEach(function(ind){
+      for(var y=100;y<=200;y++){
+        if(y<YEAR_MIN || y>YEAR_MAX){ delete ind['t'+y]; delete ind['r'+y]; delete ind['frac'+y]; }
+      }
+      if(ind.years){ Object.keys(ind.years).forEach(function(k){ var ny=Number(k); if(ny<YEAR_MIN||ny>YEAR_MAX) delete ind.years[k]; }); }
+      if(ind.displayYears){ ind.displayYears = ind.displayYears.map(Number).filter(function(y){return y>=YEAR_MIN&&y<=YEAR_MAX;}); }
+    });
+  });
+}
 var YEARS=[];
 try{var sy=JSON.parse(localStorage.getItem("adm_years")||"null");if(sy)YEARS=sy;}catch(e){}
+YEARS=_clampYears(YEARS);
 
 window.onload=function(){
   renderMembers();buildSel();renderList();renderSum();renderMeetingLinks();setupXL();renderYearTags();renderMeetingLinks();loadGHSettings();
@@ -295,6 +314,12 @@ window.onload=function(){
       GROUPS.length=0; sd.forEach(function(g){GROUPS.push(g);});
     }
   }catch(e){}}
+  // 清掉殘留在 localStorage 的超範圍年份(例如舊的 116)，並把 YEARS 收斂到 112–115
+  _stripOutOfRangeYears(GROUPS);
+  YEARS=_clampYears(YEARS);
+  try{ localStorage.setItem("admin_edit_groups", JSON.stringify(GROUPS)); }catch(e){}
+  saveYears();
+  renderYearTags(); renderList();
 };
 
 // ── Member Management ──
@@ -579,9 +604,9 @@ function mkHTML(member,ids,meetingLinksArg){
         var isNMGroup = gid.indexOf("q") === 0;
         g.indicators.forEach(function(ind) {
           // Non-medical: only use group key (q1~q12), not cancer key
-          // Medical: try group key first, then cancer key
+          // Medical: try group key first, then cancer key（容錯比對）
           var url = meetingLinks[gid];
-          if (!url && !isNMGroup) url = meetingLinks["c:" + (ind.cancer || "").trim()];
+          if (!url && !isNMGroup) url = resolveCancerLink(ind.cancer, meetingLinks);
           if (url) _ml[ind.id] = url;
         });
       });
@@ -591,7 +616,7 @@ function mkHTML(member,ids,meetingLinksArg){
         var isNMGroup = gid.indexOf("q") === 0;
         g.indicators.forEach(function(ind){
           var url = meetingLinks[gid];
-          if (!url && !isNMGroup) url = meetingLinks["c:"+(ind.cancer||"").trim()];
+          if (!url && !isNMGroup) url = resolveCancerLink(ind.cancer, meetingLinks);
           ind.meetingUrl = url || "";
         });
       });
@@ -697,7 +722,8 @@ function renderYearTags(){
 function addDisplayYear(){
   var inp=document.getElementById('add-yr');
   var y=parseInt(inp.value);
-  if(!y||y<100||y>200){ alert('請輸入有效的民國年份（例如 116）'); return; }
+  if(!y||y<100||y>200){ alert('請輸入有效的民國年份（例如 115）'); return; }
+  if(y<YEAR_MIN||y>YEAR_MAX){ alert('目前僅開放 '+YEAR_MIN+'–'+YEAR_MAX+' 年；如需 '+y+' 年，請調整程式中的 YEAR_MAX'); inp.value=''; return; }
   if(YEARS.indexOf(String(y))>-1||YEARS.indexOf(y)>-1){ alert(y+'年已存在'); inp.value=''; return; }
   // Keep max 4
   var cur=YEARS.map(Number).sort(function(a,b){return a-b;});
@@ -794,6 +820,27 @@ var _DEFAULT_ML = {"c:口腔癌": "https://drive.google.com/file/d/1imJ7tFo-Oual
 var MEETING_LINKS = Object.assign({}, _DEFAULT_ML);
 try { Object.assign(MEETING_LINKS, JSON.parse(localStorage.getItem("meetingLinks")||"{}")); } catch(e){}
 
+// ── 癌別名稱正規化 + 容錯比對（讓會議紀錄連結對得上）──
+// 匯入的癌別常帶有空白、冒號後綴(如「乳癌：國健屬(3)+團隊(3)」)、括號(如「肝癌 (2)」「膽管(囊)癌」)或別名。
+var _CANCER_SYN = {"非小細胞癌":"非小細胞肺癌","肺癌":"非小細胞肺癌","頭頸癌":"口腔癌","血液暨淋巴癌":"淋巴癌","軟巢癌":"卵巢癌","結直腸癌":"大腸癌"};
+function _normCancer(c){
+  c = String(c||"").replace(/\s+/g,"");          // 去掉所有空白
+  c = c.replace(/[：:].*$/,"");                    // 去掉冒號後綴
+  c = c.replace(/[（(][^（）()]*[）)]/g,"");        // 去掉括號群組
+  return c;
+}
+// 依癌別名稱解析連結；links 省略時用全域 MEETING_LINKS。
+function resolveCancerLink(cancer, links){
+  links = links || (typeof MEETING_LINKS!=="undefined" ? MEETING_LINKS : {});
+  if(!cancer) return "";
+  var raw = "c:" + String(cancer).trim();
+  if(links[raw]) return links[raw];
+  var n = _normCancer(cancer);
+  if(n && links["c:"+n]) return links["c:"+n];
+  if(_CANCER_SYN[n] && links["c:"+_CANCER_SYN[n]]) return links["c:"+_CANCER_SYN[n]];
+  return "";
+}
+
 function renderMeetingLinks() {
   var el = document.getElementById("meeting-links-list");
   if (!el) return;
@@ -834,8 +881,7 @@ function renderMeetingLinks() {
   });
   fixedCancers.forEach(function(cn) {
     var key = "c:" + cn;
-    var val = ml[key] || MEETING_LINKS[key] || "";
-    if (!val) return;
+    var val = ml[key] || resolveCancerLink(cn, MEETING_LINKS) || "";
     h += "<div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #F3F4F6'>";
     h += "<span style='font-size:12px;color:#374151;width:200px;flex-shrink:0'>" + cn + "</span>";
     h += "<input type='text' data-key='" + key + "' value='" + val.replace(/'/g,"&#39;") + "' placeholder='Google Drive 連結…' style='flex:1;padding:4px 8px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px;font-family:inherit'>";
@@ -853,7 +899,7 @@ function saveOneLink(btn) {
   var val = inp ? inp.value.trim() : "";
   if (val) MEETING_LINKS[key] = val;
   else delete MEETING_LINKS[key];
-  localStorage.setItem("adm_meeting_links", JSON.stringify(MEETING_LINKS));
+  localStorage.setItem("meetingLinks", JSON.stringify(MEETING_LINKS));
   btn.textContent = "✅";
   btn.style.background = "#1E7C5A";
   setTimeout(function(){ btn.textContent="儲存"; btn.style.background="#006D77"; }, 2000);
@@ -1070,9 +1116,13 @@ function procSheet(wb,sn){
     // Fixed years: 112/113/114/115
     // Extra years (116+) map into t114/r114 only if 114 is empty
     // Store all years dynamically
-    var _allYrs = Object.keys(p.years).map(Number).sort(function(a,b){return a-b;});
+    var _allYrs = Object.keys(p.years).map(Number)
+      .filter(function(y){ return y>=YEAR_MIN && y<=YEAR_MAX; })   // 只收 112–115
+      .sort(function(a,b){return a-b;});
     var _latestYr = _allYrs[_allYrs.length-1]||114;
     var _baseYrData = p.years[String(_latestYr)]||{};
+    // 把超範圍年份從 years 物件移除，避免後續又被帶出來
+    Object.keys(p.years).forEach(function(k){ var ny=Number(k); if(ny<YEAR_MIN||ny>YEAR_MAX) delete p.years[k]; });
 
     // Build indicator with year fields named by actual year number
     var indObj = {
@@ -1098,7 +1148,7 @@ function procSheet(wb,sn){
 
   // Step 3: Preserve existing threshold values from current GROUPS (all years)
   var oldThresh = {};
-  var preserveYrs = allSupportedYears().filter(function(y){ return y>=115; });
+  var preserveYrs = allSupportedYears().filter(function(y){ return y>=115 && y<=YEAR_MAX; });
   GROUPS.forEach(function(g){
     g.indicators.forEach(function(ind){
       preserveYrs.forEach(function(y){
@@ -1146,6 +1196,7 @@ function procSheet(wb,sn){
   // Step 5: Replace GROUPS in memory
   GROUPS.length=0;
   rebuilt.forEach(function(g){GROUPS.push(g);});
+  _stripOutOfRangeYears(GROUPS);   // 確保不會殘留 116 之類的超範圍年份
 
   // Auto-save to localStorage so export uses latest data
   try { localStorage.setItem('admin_edit_groups', JSON.stringify(GROUPS)); } catch(e){}
@@ -1160,7 +1211,9 @@ function procSheet(wb,sn){
       });
     });
   });
-  var sortedYrs = Object.keys(detectedYrs).map(Number).sort(function(a,b){return a-b;}).slice(-4);
+  var sortedYrs = Object.keys(detectedYrs).map(Number)
+    .filter(function(y){ return y>=YEAR_MIN && y<=YEAR_MAX; })
+    .sort(function(a,b){return a-b;}).slice(-4);
   YEARS = sortedYrs.map(String);
   saveYears();
   renderYearTags();
