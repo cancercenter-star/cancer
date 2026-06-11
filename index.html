@@ -985,7 +985,17 @@ try { GH = JSON.parse(localStorage.getItem("gh_settings")||"{}"); } catch(e){}
 
 function saveGHSettings() {
   GH.token = document.getElementById("gh-token").value.trim();
-  GH.repo  = document.getElementById("gh-repo").value.trim();
+  var rawRepo = document.getElementById("gh-repo").value.trim();
+  // 儲存前清理 repo，只保留 owner/repo 格式
+  rawRepo = rawRepo.replace(/^https?:\/\/github\.com\//, "")
+                   .replace(/\/surveys\/.*$/, "")
+                   .replace(/\.html$/, "")
+                   .replace(/\/$/, "")
+                   .trim();
+  var rp = rawRepo.split("/");
+  GH.repo = (rp.length >= 2 && rp[0] && rp[1]) ? rp[0]+"/"+rp[1] : rawRepo;
+  // 同步回 input 顯示清理後的值
+  document.getElementById("gh-repo").value = GH.repo;
   localStorage.setItem("gh_settings", JSON.stringify(GH));
   var st = document.getElementById("gh-status");
   if (GH.token && GH.repo) {
@@ -998,7 +1008,17 @@ function saveGHSettings() {
 
 function loadGHSettings() {
   if (GH.token) document.getElementById("gh-token").value = GH.token;
-  if (GH.repo)  document.getElementById("gh-repo").value  = GH.repo;
+  if (GH.repo) {
+    // 載入時也清理，修復舊版存入的髒資料
+    var r = GH.repo.replace(/^https?:\/\/github\.com\//, "")
+                   .replace(/\/surveys\/.*$/, "")
+                   .replace(/\.html$/, "")
+                   .replace(/\/$/, "").trim();
+    var rp = r.split("/");
+    GH.repo = (rp.length >= 2 && rp[0] && rp[1]) ? rp[0]+"/"+rp[1] : r;
+    document.getElementById("gh-repo").value = GH.repo;
+    localStorage.setItem("gh_settings", JSON.stringify(GH));
+  }
 }
 
 function safeBase64Encode(str) {
@@ -1027,9 +1047,16 @@ function ghUpload(filename, htmlContent, onSuccess, onFail) {
   var repo  = GH.repo  || (document.getElementById("gh-repo")  ? document.getElementById("gh-repo").value.trim()  : "");
   if (!token || !repo) { onFail("未設定 GitHub Token 或 Repo"); return; }
 
-  repo = repo.replace(/^https:\/\/github\.com\//, "").replace(/\/$/, "");
+  repo = repo.replace(/^https?:\/\/github\.com\//, "")
+             .replace(/\/surveys\/.*$/, "")
+             .replace(/\.html$/, "")
+             .replace(/\/$/, "")
+             .trim();
   var parts = repo.split("/");
-  if (parts.length !== 2) { onFail("Repo 格式錯誤，請填 owner/repo，例如 cancercenter-star/cancer"); return; }
+  if (parts.length < 2 || !parts[0] || !parts[1]) {
+    onFail("Repo 格式錯誤，請填 owner/repo（目前值：" + repo + "）"); return;
+  }
+  repo = parts[0] + "/" + parts[1];
 
   var encoded;
   try { encoded = safeBase64Encode(htmlContent); }
@@ -1047,49 +1074,51 @@ function ghUpload(filename, htmlContent, onSuccess, onFail) {
   var pagesUrl = "https://" + parts[0] + ".github.io/" + parts[1] + "/" + path;
   var defaultBranch = "main";
 
-  // Step 1: get default_branch from repo API
+  // 30 秒 timeout 保護，避免卡在「上傳中」
+  var done = false;
+  var timer = setTimeout(function() {
+    if (!done) { done = true; onFail("上傳逾時（30秒），請檢查網路或 Token 是否有效"); }
+  }, 30000);
+  function finish(fn, arg) {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    fn(arg);
+  }
+
+  // 安全的 json 解析：避免 r.json() 在非 JSON 回應時炸掉
+  function safeJson(r) {
+    return r.text().then(function(txt) {
+      try { return { ok: r.ok, status: r.status, body: JSON.parse(txt) }; }
+      catch(e) { return { ok: r.ok, status: r.status, body: { message: txt.substring(0, 200) } }; }
+    });
+  }
+
+  // Step 1: get default_branch
   fetch(repoApi, { headers: hdrs })
-    .then(function(r) {
-      return r.json().then(function(j) {
-        if (!r.ok) throw new Error("讀取 Repo 失敗 GitHub API " + r.status + ": " + (j.message || ""));
-        defaultBranch = j.default_branch || "main";
-        // Step 2: GET existing file to check sha
-        return fetch(apiUrl + "?ref=" + encodeURIComponent(defaultBranch), { headers: hdrs });
-      });
+    .then(safeJson)
+    .then(function(res) {
+      if (!res.ok) throw new Error("Repo 讀取失敗 " + res.status + ": " + (res.body.message || ""));
+      defaultBranch = res.body.default_branch || "main";
+      // Step 2: check if file exists
+      return fetch(apiUrl + "?ref=" + encodeURIComponent(defaultBranch), { headers: hdrs }).then(safeJson);
     })
-    .then(function(r) {
-      // 404 = new file, no sha needed
-      if (r.status === 404) return null;
-      return r.json().then(function(j) {
-        if (!r.ok) throw new Error("讀取檔案失敗 GitHub API " + r.status + ": " + (j.message || ""));
-        return j;
-      });
-    })
-    .then(function(existing) {
-      // Step 3: PUT file — include sha only if file already exists
-      var body = {
-        message: "Create survey: " + filename,
-        content: encoded,
-        branch: defaultBranch
-      };
+    .then(function(res) {
+      var existing = (res.status === 404) ? null : res.body;
+      if (res.status !== 404 && !res.ok) throw new Error("檔案查詢失敗 " + res.status + ": " + (res.body.message || ""));
+      // Step 3: PUT
+      var body = { message: "Create survey: " + filename, content: encoded, branch: defaultBranch };
       if (existing && existing.sha) body.sha = existing.sha;
-      return fetch(apiUrl, {
-        method: "PUT",
-        headers: hdrs,
-        body: JSON.stringify(body)
-      });
+      return fetch(apiUrl, { method: "PUT", headers: hdrs, body: JSON.stringify(body) }).then(safeJson);
     })
-    .then(function(r) {
-      return r.json().then(function(j) {
-        if (!r.ok) throw new Error("上傳失敗 GitHub API " + r.status + ": " + (j.message || JSON.stringify(j).substring(0, 120)));
-        return j;
-      });
+    .then(function(res) {
+      if (!res.ok) throw new Error("上傳失敗 " + res.status + ": " + (res.body.message || JSON.stringify(res.body).substring(0, 120)));
+      if (res.body && res.body.content) { finish(onSuccess, pagesUrl); }
+      else { finish(onFail, "GitHub 回應異常：" + JSON.stringify(res.body).substring(0, 120)); }
     })
-    .then(function(result) {
-      if (result && result.content) { onSuccess(pagesUrl); }
-      else { onFail("GitHub 回應異常，未取得 content"); }
-    })
-    .catch(function(e) { onFail(e.message); });
+    .catch(function(e) {
+      finish(onFail, e.message);
+    });
 }
 
 function procSheet(wb,sn){
