@@ -1544,11 +1544,27 @@ function exportCSV() {
     alert("尚無填寫資料可匯出");
     return;
   }
+  // 對應問卷 DISAGREE_ANALY 選項（index 0-3）
+  var ANALY_OPTS = [
+    "原因分析不完整，尚有其他因素未納入",
+    "改善措施執行力不足，需強化落實機制",
+    "需加強追蹤與回饋機制，確認改善成效",
+    "其他（請於下方意見欄說明）"
+  ];
+  // 對應問卷 DISAGREE_THRESH 選項（index 0-3）
+  var THRESH_OPTS = [
+    "建議維持原閾值，不應下修",
+    "下修幅度不足，建議進一步調降",
+    "閾值設定依據需補充說明或佐證資料",
+    "其他（請於下方意見欄說明）"
+  ];
   var lines = [];
   lines.push([
     "委員","填寫時間","問卷檔名","指標ID",
-    "會議紀錄是否討論","最新執行年未達閾值分析及改善是否合理",
-    "最新閾值年閾值調整是否合理","其他意見或建議修正"
+    "會議紀錄是否討論",
+    "分析及改善是否合理","分析不合理原因",
+    "閾值調整是否合理","閾值不合理原因",
+    "其他意見或建議修正"
   ]);
   saved.forEach(function(r) {
     var name = r.name || r.member || r["委員"] || r["姓名"] || "";
@@ -1563,11 +1579,23 @@ function exportCSV() {
       var analyAgree =
         ans.analyAgree === true  || ans.analyAgree === "true"  || ans.analyAgree === "合理"   ? "合理"   :
         ans.analyAgree === false || ans.analyAgree === "false" || ans.analyAgree === "不合理" ? "不合理" : "";
+      var analyReason = "";
+      if (analyAgree === "不合理") {
+        if (ans.analySubIdx !== undefined && ans.analySubIdx !== null) {
+          analyReason = ANALY_OPTS[+ans.analySubIdx] || "";
+        }
+      }
       var threshAgree =
         ans.threshAgree === true  || ans.threshAgree === "true"  || ans.threshAgree === "合理"   ? "合理"   :
         ans.threshAgree === false || ans.threshAgree === "false" || ans.threshAgree === "不合理" ? "不合理" : "";
+      var threshReason = "";
+      if (threshAgree === "不合理") {
+        if (ans.threshSubIdx !== undefined && ans.threshSubIdx !== null) {
+          threshReason = THRESH_OPTS[+ans.threshSubIdx] || "";
+        }
+      }
       var comment = ans.comment || ans.note || ans.remark || ans["其他意見"] || "";
-      lines.push([name, time, file, indId, discussed, analyAgree, threshAgree, comment]);
+      lines.push([name, time, file, indId, discussed, analyAgree, analyReason, threshAgree, threshReason, comment]);
     });
   });
   var csv = lines.map(function(row) {
