@@ -408,7 +408,8 @@ function swGrp(g){
     document.getElementById("t-"+t).className="tab"+(t===g?" on":"");
   });
   buildSel();renderList();
-  renderSummary();
+  // Clear any stale selection count
+  document.getElementById("gs").textContent="";
 }
 function renderList(){
   if(cg==="all"){renderAllRec();return;}
@@ -432,6 +433,7 @@ function renderList(){
         var ccl=ind.change.indexOf('刪除')>-1?'#C0392B':ind.change.indexOf('115')>-1?'#7C3AED':ind.change.indexOf('114')>-1?'#16A34A':'#B45309';
         chgBadge='<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:'+cbg+';color:'+ccl+';margin-right:4px;white-space:nowrap">'+ind.change+'</span>';
       }
+      // checked state comes only from selectedOrder, never from asgn
       var isChecked = selectedOrder.indexOf(ind.id) > -1;
       h+="<label class='ir"+(who?" asgn":"")+"'>";
       h+="<input type='checkbox' class='ic' data-id='"+ind.id+"' data-gid='"+g.id+"' data-indicator-id='"+ind.id+"'"+(isChecked?" checked":"")+" onchange='onIndicatorCheck(this,\""+ind.id+"\")'>";
@@ -443,7 +445,6 @@ function renderList(){
     h+="</div></div>";
   });
   el.innerHTML=h;
-  renderSummary();
 }
 function togGrp(head){
   var body=head.nextElementSibling;
@@ -455,12 +456,19 @@ function gChk(cb){
   var gid=cb.getAttribute("data-gid");
   document.querySelectorAll(".ic[data-gid='"+gid+"']").forEach(function(c){
     if(c.checked !== cb.checked){
-      c.checked = cb.checked;
-      onIndicatorCheck(c, c.getAttribute("data-indicator-id") || c.getAttribute("data-id"));
+      c.checked=cb.checked;
+      onIndicatorCheck(c, c.getAttribute("data-indicator-id")||c.getAttribute("data-id"));
     }
   });
 }
-// ── selectedOrder：唯一勾選來源，記錄實際勾選順序 ──
+function ckAll(v){
+  // v is always false (全不選)
+  document.querySelectorAll(".ic").forEach(function(cb){cb.checked=v;});
+  document.querySelectorAll(".gh input[type=checkbox]").forEach(function(cb){cb.checked=v;});
+  if(!v){ selectedOrder=[]; renderSummary(); }
+}
+
+// ── Selected-order tracking ──
 var selectedOrder = [];
 
 function onIndicatorCheck(cb, indicatorId) {
@@ -482,25 +490,6 @@ function renderSummary() {
     el.textContent = "已選 " + selectedOrder.length + " 項（依勾選順序）";
     el.style.color = "#006D77";
   }
-}
-
-function ckAll(flag) {
-  selectedOrder = [];
-  renderSummary();
-  renderList();  // 重繪確保所有 checkbox 狀態與 selectedOrder 一致
-}
-
-function resetCurrentDispatch() {
-  selectedOrder = [];
-  document.querySelectorAll("input[type='checkbox'][data-indicator-id]").forEach(function(cb){
-    cb.checked = false;
-  });
-  document.querySelectorAll(".gh input[type=checkbox]").forEach(function(cb){ cb.checked = false; });
-  var sel = document.getElementById("sel-m");
-  if (sel) sel.value = "";
-  renderSummary();
-  renderList();  // reset 後才重繪，確保 checkbox 全部清空
-  renderSum();
 }
 function renderSum(){
   var ct={};
@@ -550,10 +539,27 @@ function renderAllRec(){
 function doGen(){
   var member=document.getElementById("sel-m").value;
   if(!member){alert("請選擇委員");return;}
-  if(!selectedOrder.length){alert("請先勾選要派送的指標");return;}
 
-  var ids=selectedOrder.slice();
+  // Build ordered indicator list from selectedOrder
+  var selectedIndicators = [];
+  selectedOrder.forEach(function(id){
+    GROUPS.forEach(function(g){
+      var item = g.indicators.find(function(x){ return x.id === id; });
+      if(item){
+        selectedIndicators.push({
+          ind: item,
+          groupId: g.id,
+          groupName: g.name,
+          groupType: g.type
+        });
+      }
+    });
+  });
+  if(!selectedIndicators.length){alert("請先勾選要派送的指標");return;}
 
+  var ids = selectedIndicators.map(function(x){ return x.ind.id; });
+
+  // Validate: all IDs must be same type (all q or all m)
   var hasQ=ids.some(function(id){return id.charAt(0)==="q";});
   var hasM=ids.some(function(id){return id.charAt(0)==="m";});
   if(hasQ&&hasM){alert("請勿同時選擇非醫療(Q)和醫療(M)的指標");return;}
@@ -561,46 +567,75 @@ function doGen(){
   ids.forEach(function(id){asgn[id]=member;});
   localStorage.setItem("adm_asgn",JSON.stringify(asgn));
 
-  var _ml=Object.assign({},MEETING_LINKS);
-  try{Object.assign(_ml,JSON.parse(localStorage.getItem("meetingLinks")||"{}"));}catch(e){}
+  var _ml = Object.assign({}, MEETING_LINKS);
+  try{ Object.assign(_ml, JSON.parse(localStorage.getItem("meetingLinks")||"{}")); }catch(e){}
 
-  mkHTML(member,ids,_ml,ids.slice());
+  // Pass ordered ids to mkHTML — 清空動作在 mkHTML 成功/失敗後才執行
+  mkHTML(member, ids, _ml, selectedOrder.slice());
+}
+
+// 派送完成後歸零（由 mkHTML 回呼觸發）
+function resetDispatch(){
+  selectedOrder = [];
+  document.querySelectorAll("input[type='checkbox'][data-indicator-id]").forEach(function(cb){
+    cb.checked = false;
+  });
+  document.querySelectorAll(".gh input[type=checkbox]").forEach(function(cb){ cb.checked = false; });
+  var sel = document.getElementById("sel-m");
+  if(sel) sel.value = "";
+  renderSummary();
+  renderList(); renderSum();
 }
 function mkHTML(member,ids,meetingLinksArg,orderedIds){
   var st=document.getElementById("gs");
   st.textContent="⏳ 產生中…";st.style.color="#C8963E";
   setTimeout(function(){
     try{
+      // Determine: q=non-medical, m=medical
       var isNM=ids.every(function(id){return id.charAt(0)==="q";});
 
-      // 用 orderedIds（勾選順序）建立 indMap，嚴格只取本次勾選的指標
+      // Use orderedIds if provided, else fall back to ids order
       var order = (orderedIds && orderedIds.length) ? orderedIds : ids;
+
+      // Filter only the selected indicators from GROUPS, preserving orderedIds sequence
       var _defThreshMap = window._DEFAULT_GROUPS_THRESH || {};
 
-      // 建立 id → {ind, group} 的查找表
+      // Build a flat map: id -> {indicator, group}
       var indMap = {};
       GROUPS.forEach(function(g){
         if(isNM && g.type!=="non-medical") return;
         if(!isNM && g.type!=="medical") return;
         g.indicators.forEach(function(ind){
-          if(ids.indexOf(ind.id)>-1) indMap[ind.id]={ind:ind,group:g};
+          if(ids.indexOf(ind.id)>-1){
+            indMap[ind.id] = { ind: ind, group: g };
+          }
         });
       });
 
-      // 依勾選順序組裝各群組，嚴格只含本次勾選的指標
-      var seenGroups={}, groupOrder=[], groupInds={};
+      // Build filtered groups respecting orderedIds sequence
+      // Each group appears once; its indicators are ordered by orderedIds
+      var seenGroups = {};
+      var groupOrder = []; // ordered group ids
+      var groupInds  = {}; // groupId -> [ordered indicators]
       order.forEach(function(id){
-        var entry=indMap[id]; if(!entry) return;
-        var gid=entry.group.id;
-        if(!seenGroups[gid]){seenGroups[gid]=true;groupOrder.push(gid);groupInds[gid]=[];}
-        // backfill threshold fields from defaults
-        var ind=entry.ind;
-        var def=_defThreshMap[ind.id];
+        var entry = indMap[id];
+        if(!entry) return;
+        var gid = entry.group.id;
+        if(!seenGroups[gid]){
+          seenGroups[gid] = true;
+          groupOrder.push(gid);
+          groupInds[gid] = [];
+        }
+        // Backfill threshold fields from defaults
+        var ind = entry.ind;
+        var def = _defThreshMap[ind.id];
         if(def){
-          var merged=JSON.parse(JSON.stringify(ind));
+          var merged = JSON.parse(JSON.stringify(ind));
           for(var y=112;y<=200;y++){
             var tf='t'+y;
-            if((!merged[tf]||!String(merged[tf]).trim()) && def[tf] && String(def[tf]).trim()) merged[tf]=def[tf];
+            if((!merged[tf]||!String(merged[tf]).trim()) && def[tf] && String(def[tf]).trim()){
+              merged[tf]=def[tf];
+            }
           }
           groupInds[gid].push(merged);
         } else {
@@ -608,29 +643,23 @@ function mkHTML(member,ids,meetingLinksArg,orderedIds){
         }
       });
 
-      // 最終 filtered：群組順序依勾選，每群組的指標也依勾選順序
-      var filtered=[];
+      // Build filtered array in group order
+      var filtered = [];
       groupOrder.forEach(function(gid){
-        var g=GROUPS.find(function(x){return x.id===gid;}); if(!g) return;
-        var gc=JSON.parse(JSON.stringify(g));
-        gc.indicators=groupInds[gid];
-        gc.total=gc.indicators.length;
+        var g = GROUPS.find(function(x){ return x.id === gid; });
+        if(!g) return;
+        var gc = JSON.parse(JSON.stringify(g));
+        gc.indicators = groupInds[gid];
+        gc.total = gc.indicators.length;
         filtered.push(gc);
       });
 
       if(!filtered.length){st.textContent="❌ 無對應指標";st.style.color="#C0392B";return;}
 
-      // 驗證：filtered 中指標總數必須等於 order.length
-      var totalInjected=0;
-      filtered.forEach(function(g){totalInjected+=g.indicators.length;});
-      if(totalInjected !== order.length){
-        console.warn("指標數不符：order="+order.length+" injected="+totalInjected);
-      }
-
       // Decode survey template
       var html=_dec(isNM?_S1:_S2);
 
-      // Inject filtered (only selected indicators, in order) into GROUPS slot
+      // Replace GROUPS — also backfill missing threshold fields from defaults
       var gStart=html.indexOf("const GROUPS = [");
       if(gStart>-1){
         var depth=0; var pos=gStart+15;
@@ -640,36 +669,59 @@ function mkHTML(member,ids,meetingLinksArg,orderedIds){
           pos++;
         }
         var gEnd=html.indexOf(";",pos)+1;
+        // Backfill GROUPS too
+        var _groupsToInject = JSON.parse(JSON.stringify(GROUPS));
+        _groupsToInject.forEach(function(g){
+          if(!g.indicators) return;
+          g.indicators.forEach(function(ind){
+            var def=_defThreshMap[ind.id];
+            if(!def) return;
+            for(var y=112;y<=200;y++){
+              var tf='t'+y;
+              if((!ind[tf]||!String(ind[tf]).trim()) && def[tf] && String(def[tf]).trim()){
+                ind[tf]=def[tf];
+              }
+            }
+          });
+        });
+        // Only inject the dispatched subset, not the entire admin dataset.
+        // This keeps the generated questionnaire smaller and avoids blank pages caused by oversized/fragile JS.
         html=html.substring(0,gStart)+"const GROUPS = "+JSON.stringify(filtered)+";"+html.substring(gEnd);
       }
 
-      // Inject meeting links
-      var meetingLinks=meetingLinksArg||{};
-      var _ml={};
-      filtered.forEach(function(g){
-        var gid=String(g.id||"").toLowerCase().trim();
-        var isNMGroup=gid.indexOf("q")===0;
-        g.indicators.forEach(function(ind){
-          var url=meetingLinks[gid];
-          if(!url&&!isNMGroup) url=resolveCancerLink(ind.cancer,meetingLinks);
-          if(url) _ml[ind.id]=url;
-        });
-      });
-      filtered.forEach(function(g){
-        var gid=String(g.id||"").toLowerCase().trim();
-        var isNMGroup=gid.indexOf("q")===0;
-        g.indicators.forEach(function(ind){
-          var url=meetingLinks[gid];
-          if(!url&&!isNMGroup) url=resolveCancerLink(ind.cancer,meetingLinks);
-          ind.meetingUrl=url||"";
-        });
-      });
-      html=html.replace("var MEETING_LINKS = {}; // runtime-populated","var MEETING_LINKS = "+JSON.stringify(_ml)+"; // runtime-populated");
 
-      // Inject member list
-      var memberList=isNM?MNM:MMED;
-      var newOpts=memberList.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('\n          ');
-      html=html.replace(
+      // Inject meeting links by group id: q1-q12, m1-m8
+      var meetingLinks = meetingLinksArg || {};
+      var _ml = {};
+      filtered.forEach(function(g) {
+        var gid = String(g.id || "").toLowerCase().trim();
+        var isNMGroup = gid.indexOf("q") === 0;
+        g.indicators.forEach(function(ind) {
+          // Non-medical: only use group key (q1~q12), not cancer key
+          // Medical: try group key first, then cancer key（容錯比對）
+          var url = meetingLinks[gid];
+          if (!url && !isNMGroup) url = resolveCancerLink(ind.cancer, meetingLinks);
+          if (url) _ml[ind.id] = url;
+        });
+      });
+      // Stamp meetingUrl onto each indicator before baking
+      filtered.forEach(function(g){
+        var gid=String(g.id||"").toLowerCase().trim();
+        var isNMGroup = gid.indexOf("q") === 0;
+        g.indicators.forEach(function(ind){
+          var url = meetingLinks[gid];
+          if (!url && !isNMGroup) url = resolveCancerLink(ind.cancer, meetingLinks);
+          ind.meetingUrl = url || "";
+        });
+      });
+
+      html=html.replace("var MEETING_LINKS = {}; // runtime-populated","var MEETING_LINKS = "+JSON.stringify(_ml)+"; // runtime-populated");
+      // Inject current member list into survey dropdown
+      var memberList = isNM ? MNM : MMED;
+      var newOpts = memberList.map(function(m){
+        return '<option value="'+m+'">'+m+'</option>';
+      }).join('\n          ');
+      html = html.replace(
         /<option value="">— 請選擇姓名 —<\/option>[\s\S]*?<\/select>/,
         '<option value="">— 請選擇姓名 —<\/option>\n          '+newOpts+'\n        <\/select>'
       );
@@ -677,34 +729,40 @@ function mkHTML(member,ids,meetingLinksArg,orderedIds){
       html=html.replace("var _bakedGroups = null; // filled by exportSurveyFile()",
         "var _presetMember='"+member.replace(/'/g,"\\'")+"';var _bakedGroups = "+JSON.stringify(filtered)+";");
 
-      // Download / GitHub upload
+      // Download
       var dt=new Date().toISOString().slice(0,10).replace(/-/g,"");
-      var safeName=member.replace(/[^a-zA-Z0-9]/g,function(ch){return encodeURIComponent(ch).replace(/%/g,'');}).substring(0,20)||"member";
+      var safeName=member.replace(/[^a-zA-Z0-9]/g,function(ch){
+        // Transliterate common Chinese names to pinyin initials or use hex
+        return encodeURIComponent(ch).replace(/%/g,'');
+      }).substring(0,20)||"member";
       var fname="survey_"+safeName+"_"+dt+".html";
 
-      if(GH.token&&GH.repo){
+      // Try GitHub upload first; fallback to download
+      if (GH.token && GH.repo) {
         st.textContent="⏳ 上傳中…";
-        ghUpload(fname,html,
-          function(url){
+        ghUpload(fname, html,
+          function(url) {
             st.innerHTML='✅ 連結已產生！<br><a href="'+url+'" target="_blank" style="color:#006D77;font-weight:800;text-decoration:underline;word-break:break-all">'+url+'</a>';
             st.style.color="#1E7C5A";
-            try{navigator.clipboard.writeText(url);}catch(e){}
-            asgn["__link_"+member]=url;
+            try { navigator.clipboard.writeText(url); } catch(e){}
+            asgn["__link_"+member] = url;
             localStorage.setItem("adm_asgn",JSON.stringify(asgn));
-            resetCurrentDispatch(); // 成功後歸零
+            resetDispatch();
           },
-          function(err){
+          function(err) {
+            // Fallback to download
             var blob=new Blob([html],{type:"text/html;charset=utf-8"});
             var a=document.createElement("a");
             a.href=URL.createObjectURL(blob); a.download=fname;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             setTimeout(function(){URL.revokeObjectURL(a.href);},5000);
-            st.textContent="⚠️ 上傳失敗("+err+")，已下載檔案";
-            st.style.color="#C8963E";
-            resetCurrentDispatch(); // 失敗 fallback 也歸零
+            st.textContent="⚠️ 上傳失敗："+err+"（已自動下載）";
+            st.style.color="#C0392B";
+            resetDispatch();
           }
         );
       } else {
+        // No GitHub settings - just download
         var blob=new Blob([html],{type:"text/html;charset=utf-8"});
         var a=document.createElement("a");
         a.href=URL.createObjectURL(blob); a.download=fname;
@@ -712,11 +770,8 @@ function mkHTML(member,ids,meetingLinksArg,orderedIds){
         setTimeout(function(){URL.revokeObjectURL(a.href);},5000);
         st.innerHTML='✅ 已下載（設定 GitHub Token 可改為直接產生連結）';
         st.style.color="#1E7C5A";
-        resetCurrentDispatch(); // 下載後歸零
-        setTimeout(function(){
-          var s=document.getElementById("gs");
-          if(s&&s.textContent.indexOf("✅ 已下載")===0) s.textContent="";
-        },5000);
+        resetDispatch();
+        setTimeout(function(){st.textContent="";},5000);
       }
     }catch(err){
       st.textContent="❌ "+err.message;
@@ -1008,74 +1063,74 @@ function safeBase64Encode(str) {
 function ghUpload(filename, htmlContent, onSuccess, onFail) {
   if (!GH.token || !GH.repo) { onFail("未設定 GitHub Token 或 Repo"); return; }
 
-  // 清理 GH.repo，防止髒值混入 URL
+  // 清理 GH.repo，防止含 /surveys/xxx.html 的髒值
   var repo = GH.repo
     .replace(/^https?:\/\/github\.com\//, "")
     .replace(/\/surveys\/.*$/, "")
     .replace(/\.html$/, "")
-    .replace(/\/$/, "")
-    .trim();
+    .replace(/\/$/, "").trim();
   var parts = repo.split("/");
   if (parts.length < 2 || !parts[0] || !parts[1]) {
-    onFail("Repo 格式錯誤，請填 owner/repo"); return;
+    onFail("Repo 格式錯誤，請填 owner/repo（目前：" + repo + "）"); return;
   }
   repo = parts[0] + "/" + parts[1];
 
   var encoded;
   try { encoded = safeBase64Encode(htmlContent); }
-  catch(e) { onFail("Base64 編碼失敗: " + e.message); return; }
+  catch(e) { onFail("Base64 失敗: " + e.message); return; }
 
+  var hdrs = {
+    "Authorization": "Bearer " + GH.token,
+    "Accept": "application/vnd.github+json",
+    "Content-Type": "application/json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
   var repoApi  = "https://api.github.com/repos/" + repo;
   var path     = "surveys/" + filename;
   var apiUrl   = repoApi + "/contents/" + path;
   var pagesUrl = "https://" + parts[0] + ".github.io/" + parts[1] + "/" + path;
-  var hdrs = {
-    "Authorization": "Bearer " + GH.token,
-    "Accept":        "application/vnd.github+json",
-    "Content-Type":  "application/json",
-    "X-GitHub-Api-Version": "2022-11-28"
-  };
-  var defaultBranch = "main";
+  var branch   = "main";
 
+  // 防止卡住：90 秒後自動 fail
   var done = false;
   var timer = setTimeout(function(){
-    if(!done){ done=true; onFail("上傳逾時（90秒），請重試"); }
+    if (!done) { done = true; onFail("上傳逾時（90秒），請重試"); }
   }, 90000);
-  function finish(fn, arg){ if(done)return; done=true; clearTimeout(timer); fn(arg); }
+  function finish(fn, arg) {
+    if (done) return;
+    done = true; clearTimeout(timer); fn(arg);
+  }
 
-  // Step 1: get default_branch
-  fetch(repoApi, { headers: hdrs })
-  .then(function(r){ return r.text().then(function(t){
-    try{ var j=JSON.parse(t);
-      if(!r.ok) throw new Error("Repo讀取失敗 "+r.status+": "+(j.message||""));
-      defaultBranch = j.default_branch || "main";
-    }catch(e){ if(!r.ok) throw e; }
-    // Step 2: check sha
-    return fetch(apiUrl+"?ref="+defaultBranch, { headers: hdrs });
-  }); })
-  .then(function(r){
-    if(r.status===401) throw new Error("Token 無效或已過期");
-    if(r.status===403) throw new Error("Token 權限不足");
-    if(r.status===404) return null;
-    return r.json();
-  })
-  .then(function(existing){
-    var body = { message:"Create survey: "+filename, content:encoded, branch:defaultBranch };
-    if(existing && existing.sha) body.sha = existing.sha;
-    return fetch(apiUrl, { method:"PUT", headers:hdrs, body:JSON.stringify(body) });
-  })
-  .then(function(r){
-    return r.text().then(function(t){
-      var j; try{ j=JSON.parse(t); }catch(e){ j={}; }
-      if(!r.ok) throw new Error("上傳失敗 "+r.status+": "+(j.message||t.substring(0,100)));
-      return j;
+  // 安全 JSON 解析（防止非 JSON 回應炸掉）
+  function safeJson(r) {
+    return r.text().then(function(t) {
+      var j; try { j = JSON.parse(t); } catch(e) { j = { message: t.substring(0,200) }; }
+      return { ok: r.ok, status: r.status, body: j };
     });
+  }
+
+  // Step 1: 取 default_branch
+  fetch(repoApi, { headers: hdrs }).then(safeJson)
+  .then(function(res) {
+    if (!res.ok) throw new Error("Repo 讀取失敗 " + res.status + ": " + (res.body.message || "Token 或 Repo 不正確"));
+    branch = res.body.default_branch || "main";
+    // Step 2: 確認檔案是否已存在（取 sha）
+    return fetch(apiUrl + "?ref=" + branch, { headers: hdrs }).then(safeJson);
   })
-  .then(function(result){
-    if(result && result.content){ finish(onSuccess, pagesUrl); }
-    else{ finish(onFail, "GitHub回應異常: "+JSON.stringify(result).substring(0,100)); }
+  .then(function(res) {
+    var existing = (res.status === 404) ? null : res.body;
+    if (res.status !== 404 && !res.ok) throw new Error("檔案查詢失敗 " + res.status + ": " + (res.body.message || ""));
+    // Step 3: PUT 上傳
+    var body = { message: "Create survey: " + filename, content: encoded, branch: branch };
+    if (existing && existing.sha) body.sha = existing.sha;
+    return fetch(apiUrl, { method: "PUT", headers: hdrs, body: JSON.stringify(body) }).then(safeJson);
   })
-  .catch(function(e){ finish(onFail, e.message); });
+  .then(function(res) {
+    if (!res.ok) throw new Error("上傳失敗 " + res.status + ": " + (res.body.message || JSON.stringify(res.body).substring(0,150)));
+    if (res.body && res.body.content) { finish(onSuccess, pagesUrl); }
+    else { finish(onFail, "GitHub 回應異常: " + JSON.stringify(res.body).substring(0,150)); }
+  })
+  .catch(function(e) { finish(onFail, e.message); });
 }
 
 function procSheet(wb,sn){
