@@ -982,6 +982,20 @@ function saveMeetingLinks() {
 // ── GitHub Auto Upload ──
 var GH = {};
 try { GH = JSON.parse(localStorage.getItem("gh_settings")||"{}"); } catch(e){}
+// 立即清理 GH.repo，修復舊版存入的髒資料（含 /surveys/xxx.html 的值）
+(function(){
+  if (!GH.repo) return;
+  var r = GH.repo.replace(/^https?:\/\/github\.com\//, "")
+                 .replace(/\/surveys\/.*$/, "")
+                 .replace(/\.html$/, "")
+                 .replace(/\/$/, "").trim();
+  var rp = r.split("/");
+  var clean = (rp.length >= 2 && rp[0] && rp[1]) ? rp[0]+"/"+rp[1] : r;
+  if (clean !== GH.repo) {
+    GH.repo = clean;
+    try { localStorage.setItem("gh_settings", JSON.stringify(GH)); } catch(e){}
+  }
+})();
 
 function saveGHSettings() {
   GH.token = document.getElementById("gh-token").value.trim();
