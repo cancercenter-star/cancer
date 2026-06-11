@@ -744,7 +744,7 @@ function mkHTML(member,ids,meetingLinksArg,orderedIds){
           function(url) {
             st.innerHTML='✅ 連結已產生！<br><a href="'+url+'" target="_blank" style="color:#006D77;font-weight:800;text-decoration:underline;word-break:break-all">'+url+'</a>';
             st.style.color="#1E7C5A";
-            try { navigator.clipboard.writeText(url); } catch(e){}
+            try { if(navigator.clipboard && document.hasFocus()) navigator.clipboard.writeText(url); } catch(e){}
             asgn["__link_"+member] = url;
             localStorage.setItem("adm_asgn",JSON.stringify(asgn));
             resetDispatch();
