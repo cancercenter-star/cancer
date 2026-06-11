@@ -407,20 +407,12 @@ function swGrp(g){
   ["nm","med","all"].forEach(function(t){
     document.getElementById("t-"+t).className="tab"+(t===g?" on":"");
   });
-  // 切換 tab 時清空本次勾選，避免不同 tab 的指標混入 selectedOrder
-  selectedOrder=[];
   buildSel();renderList();
   renderSummary();
 }
 function renderList(){
   if(cg==="all"){renderAllRec();return;}
   var data=GROUPS.filter(function(g){return cg==="nm"?g.type==="non-medical":g.type==="medical";});
-
-  // 清除 selectedOrder 中不屬於當前 tab 的殘留 id
-  var validForTab = new Set();
-  data.forEach(function(g){ g.indicators.forEach(function(ind){ validForTab.add(ind.id); }); });
-  selectedOrder = selectedOrder.filter(function(id){ return validForTab.has(id); });
-
   var el=document.getElementById("il");
   var h="";
   data.forEach(function(g){
@@ -451,6 +443,7 @@ function renderList(){
     h+="</div></div>";
   });
   el.innerHTML=h;
+  renderSummary();
 }
 function togGrp(head){
   var body=head.nextElementSibling;
@@ -557,18 +550,9 @@ function renderAllRec(){
 function doGen(){
   var member=document.getElementById("sel-m").value;
   if(!member){alert("請選擇委員");return;}
-
   if(!selectedOrder.length){alert("請先勾選要派送的指標");return;}
 
-  // 嚴格過濾：只取目前 tab 實際存在於 DOM 的 checkbox（避免殘留 id）
-  var validIds = new Set();
-  document.querySelectorAll("input[type='checkbox'][data-indicator-id]:checked").forEach(function(cb){
-    validIds.add(cb.getAttribute("data-indicator-id"));
-  });
-  // 用 selectedOrder 的順序，但只保留 DOM 中確實勾選的
-  var ids = selectedOrder.filter(function(id){ return validIds.has(id); });
-
-  if(!ids.length){alert("請先勾選要派送的指標");return;}
+  var ids=selectedOrder.slice();
 
   var hasQ=ids.some(function(id){return id.charAt(0)==="q";});
   var hasM=ids.some(function(id){return id.charAt(0)==="m";});
@@ -577,11 +561,10 @@ function doGen(){
   ids.forEach(function(id){asgn[id]=member;});
   localStorage.setItem("adm_asgn",JSON.stringify(asgn));
 
-  var _ml = Object.assign({}, MEETING_LINKS);
-  try{ Object.assign(_ml, JSON.parse(localStorage.getItem("meetingLinks")||"{}")); }catch(e){}
+  var _ml=Object.assign({},MEETING_LINKS);
+  try{Object.assign(_ml,JSON.parse(localStorage.getItem("meetingLinks")||"{}"));}catch(e){}
 
-  mkHTML(member, ids, _ml, ids.slice());
-  // renderList/renderSum 已移至 resetCurrentDispatch 裡，由 mkHTML callback 觸發
+  mkHTML(member,ids,_ml,ids.slice());
 }
 function mkHTML(member,ids,meetingLinksArg,orderedIds){
   var st=document.getElementById("gs");
