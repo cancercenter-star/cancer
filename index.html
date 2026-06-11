@@ -730,12 +730,13 @@ function mkHTML(member,ids,meetingLinksArg,orderedIds){
         "var _presetMember='"+member.replace(/'/g,"\\'")+"';var _bakedGroups = "+JSON.stringify(filtered)+";");
 
       // Download
-      var dt=new Date().toISOString().slice(0,10).replace(/-/g,"");
+      var _now=new Date();
+      var dt=_now.toISOString().slice(0,10).replace(/-/g,"");
+      var ts=String(_now.getTime()).slice(-6);
       var safeName=member.replace(/[^a-zA-Z0-9]/g,function(ch){
-        // Transliterate common Chinese names to pinyin initials or use hex
         return encodeURIComponent(ch).replace(/%/g,'');
       }).substring(0,20)||"member";
-      var fname="survey_"+safeName+"_"+dt+".html";
+      var fname="survey_"+safeName+"_"+dt+"_"+ts+".html";
 
       // Try GitHub upload first; fallback to download
       if (GH.token && GH.repo) {
