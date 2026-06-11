@@ -1068,7 +1068,7 @@ function ghUpload(filename, htmlContent, onSuccess, onFail) {
              .trim();
   var parts = repo.split("/");
   if (parts.length < 2 || !parts[0] || !parts[1]) {
-    onFail("Repo 格式錯誤，請填 owner/repo（目前值：" + repo + "）"); return;
+    onFail("Repo 格式錯誤（目前值：" + repo + "）"); return;
   }
   repo = parts[0] + "/" + parts[1];
 
@@ -1087,11 +1087,11 @@ function ghUpload(filename, htmlContent, onSuccess, onFail) {
   var apiUrl   = repoApi + "/contents/" + path;
   var pagesUrl = "https://" + parts[0] + ".github.io/" + parts[1] + "/" + path;
   var defaultBranch = "main";
+  var st = document.getElementById("gs");
 
-  // 30 秒 timeout 保護，避免卡在「上傳中」
   var done = false;
   var timer = setTimeout(function() {
-    if (!done) { done = true; onFail("上傳逾時（30秒），請檢查網路或 Token 是否有效"); }
+    if (!done) { done = true; onFail("上傳逾時（30秒），請確認 Token 有效且有 repo 寫入權限"); }
   }, 30000);
   function finish(fn, arg) {
     if (done) return;
@@ -1099,36 +1099,44 @@ function ghUpload(filename, htmlContent, onSuccess, onFail) {
     clearTimeout(timer);
     fn(arg);
   }
+  function setStatus(msg) {
+    if (st) { st.textContent = msg; st.style.color = "#C8963E"; }
+  }
 
-  // 安全的 json 解析：避免 r.json() 在非 JSON 回應時炸掉
   function safeJson(r) {
     return r.text().then(function(txt) {
       try { return { ok: r.ok, status: r.status, body: JSON.parse(txt) }; }
-      catch(e) { return { ok: r.ok, status: r.status, body: { message: txt.substring(0, 200) } }; }
+      catch(e) { return { ok: r.ok, status: r.status, body: { message: txt.substring(0, 300) } }; }
     });
   }
 
   // Step 1: get default_branch
+  setStatus("⏳ 步驟1/3：讀取 Repo 設定…");
   fetch(repoApi, { headers: hdrs })
     .then(safeJson)
     .then(function(res) {
-      if (!res.ok) throw new Error("Repo 讀取失敗 " + res.status + ": " + (res.body.message || ""));
+      if (!res.ok) throw new Error("Repo 讀取失敗 " + res.status + ": " + (res.body.message || "請確認 Repo 名稱和 Token 是否正確"));
       defaultBranch = res.body.default_branch || "main";
-      // Step 2: check if file exists
+      // Step 2: check if file exists (404 = new file, normal)
+      setStatus("⏳ 步驟2/3：確認檔案狀態（branch: " + defaultBranch + "）…");
       return fetch(apiUrl + "?ref=" + encodeURIComponent(defaultBranch), { headers: hdrs }).then(safeJson);
     })
     .then(function(res) {
       var existing = (res.status === 404) ? null : res.body;
       if (res.status !== 404 && !res.ok) throw new Error("檔案查詢失敗 " + res.status + ": " + (res.body.message || ""));
       // Step 3: PUT
+      setStatus("⏳ 步驟3/3：上傳問卷…");
       var body = { message: "Create survey: " + filename, content: encoded, branch: defaultBranch };
       if (existing && existing.sha) body.sha = existing.sha;
       return fetch(apiUrl, { method: "PUT", headers: hdrs, body: JSON.stringify(body) }).then(safeJson);
     })
     .then(function(res) {
-      if (!res.ok) throw new Error("上傳失敗 " + res.status + ": " + (res.body.message || JSON.stringify(res.body).substring(0, 120)));
-      if (res.body && res.body.content) { finish(onSuccess, pagesUrl); }
-      else { finish(onFail, "GitHub 回應異常：" + JSON.stringify(res.body).substring(0, 120)); }
+      if (!res.ok) throw new Error("上傳失敗 " + res.status + ": " + (res.body.message || JSON.stringify(res.body).substring(0, 200)));
+      if (res.body && res.body.content) {
+        finish(onSuccess, pagesUrl);
+      } else {
+        finish(onFail, "GitHub 回應異常：" + JSON.stringify(res.body).substring(0, 200));
+      }
     })
     .catch(function(e) {
       finish(onFail, e.message);
