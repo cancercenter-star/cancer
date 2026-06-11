@@ -432,8 +432,9 @@ function renderList(){
         var ccl=ind.change.indexOf('刪除')>-1?'#C0392B':ind.change.indexOf('115')>-1?'#7C3AED':ind.change.indexOf('114')>-1?'#16A34A':'#B45309';
         chgBadge='<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:'+cbg+';color:'+ccl+';margin-right:4px;white-space:nowrap">'+ind.change+'</span>';
       }
+      var isChecked = selectedOrder.indexOf(ind.id) > -1;
       h+="<label class='ir"+(who?" asgn":"")+"'>";
-      h+="<input type='checkbox' class='ic' data-id='"+ind.id+"' data-gid='"+g.id+"' data-indicator-id='"+ind.id+"' onchange='onIndicatorCheck(this,\""+ind.id+"\")'>";
+      h+="<input type='checkbox' class='ic' data-id='"+ind.id+"' data-gid='"+g.id+"' data-indicator-id='"+ind.id+"'"+(isChecked?" checked":"")+" onchange='onIndicatorCheck(this,\""+ind.id+"\")'>";
       h+="<span class='ino'>"+ind.no+"</span>";
       h+="<span class='inm'>"+chgBadge+(ind.cancer?ind.cancer+" — ":"")+ind.name.substring(0,45)+"</span>";
       if(who)h+="<span class='itg'>✓ "+who+"</span>";
@@ -484,19 +485,22 @@ function renderSummary() {
 }
 
 function ckAll(flag) {
-  document.querySelectorAll("input[type='checkbox'][data-indicator-id]").forEach(function(cb){
-    cb.checked = flag;
-  });
+  selectedOrder = [];
   renderSummary();
+  renderList();  // 重繪確保所有 checkbox 狀態與 selectedOrder 一致
 }
 
 function resetCurrentDispatch() {
+  selectedOrder = [];
   document.querySelectorAll("input[type='checkbox'][data-indicator-id]").forEach(function(cb){
     cb.checked = false;
   });
+  document.querySelectorAll(".gh input[type=checkbox]").forEach(function(cb){ cb.checked = false; });
   var sel = document.getElementById("sel-m");
   if (sel) sel.value = "";
   renderSummary();
+  renderList();  // reset 後才重繪，確保 checkbox 全部清空
+  renderSum();
 }
 function renderSum(){
   var ct={};
@@ -546,105 +550,96 @@ function renderAllRec(){
 function doGen(){
   var member=document.getElementById("sel-m").value;
   if(!member){alert("請選擇委員");return;}
+  if(!selectedOrder.length){alert("請先勾選要派送的指標");return;}
 
-  // 防止連續點擊造成 409
-  var _genBtn=document.querySelector("button[onclick='doGen()']");
-  if(_genBtn){_genBtn.disabled=true;_genBtn.textContent="⏳ 產生中…";}
+  var ids=selectedOrder.slice();
 
-  // 唯一來源：目前畫面上實際 checked 的 checkbox
-  var checkedBoxes=Array.from(
-    document.querySelectorAll("input[type='checkbox'][data-indicator-id]:checked")
-  );
-
-  var meetingLinks=Object.assign({},MEETING_LINKS);
-  try{Object.assign(meetingLinks,JSON.parse(localStorage.getItem("meetingLinks")||"{}"));}catch(e){}
-
-  var selectedIndicators=checkedBoxes.map(function(cb){
-    var id=cb.dataset.indicatorId;
-    for(var gi=0;gi<GROUPS.length;gi++){
-      var g=GROUPS[gi];
-      var item=g.indicators.find(function(x){return x.id===id;});
-      if(item){
-        return Object.assign({},item,{
-          groupId:g.id,
-          groupName:g.name,
-          groupType:g.type,
-          meetingUrl:meetingLinks[g.id]||""
-        });
-      }
-    }
-    return null;
-  }).filter(Boolean);
-
-  if(!selectedIndicators.length){alert("請先勾選要派送的指標");return;}
-
-  var hasQ=selectedIndicators.some(function(x){return x.groupId.charAt(0)==="q";});
-  var hasM=selectedIndicators.some(function(x){return x.groupId.charAt(0)==="m";});
+  var hasQ=ids.some(function(id){return id.charAt(0)==="q";});
+  var hasM=ids.some(function(id){return id.charAt(0)==="m";});
   if(hasQ&&hasM){alert("請勿同時選擇非醫療(Q)和醫療(M)的指標");return;}
 
-  selectedIndicators.forEach(function(x){asgn[x.id]=member;});
+  ids.forEach(function(id){asgn[id]=member;});
   localStorage.setItem("adm_asgn",JSON.stringify(asgn));
 
-  mkHTML(member,selectedIndicators,meetingLinks);
+  var _ml=Object.assign({},MEETING_LINKS);
+  try{Object.assign(_ml,JSON.parse(localStorage.getItem("meetingLinks")||"{}"));}catch(e){}
+
+  mkHTML(member,ids,_ml,ids.slice());
 }
-function _reenableGenBtn(){
-  var b=document.querySelector("button[onclick='doGen()']");
-  if(b){b.disabled=false;b.textContent="📤 產生問卷";}
-}
-function mkHTML(member,selectedIndicators,meetingLinksArg){
+function mkHTML(member,ids,meetingLinksArg,orderedIds){
   var st=document.getElementById("gs");
   st.textContent="⏳ 產生中…";st.style.color="#C8963E";
   setTimeout(function(){
     try{
-      if(!selectedIndicators||!selectedIndicators.length){
-        st.textContent="❌ 無對應指標";st.style.color="#C0392B";return;
-      }
+      var isNM=ids.every(function(id){return id.charAt(0)==="q";});
 
-      var isNM=selectedIndicators.every(function(x){return (x.groupId||x.id||"").charAt(0)==="q";});
+      // 用 orderedIds（勾選順序）建立 indMap，嚴格只取本次勾選的指標
+      var order = (orderedIds && orderedIds.length) ? orderedIds : ids;
+      var _defThreshMap = window._DEFAULT_GROUPS_THRESH || {};
 
-      // 按 groupId 分組，保持 selectedIndicators 的順序
-      var seenGroups={},groupOrder=[],groupInds={};
-      selectedIndicators.forEach(function(item){
-        var gid=item.groupId;
-        if(!seenGroups[gid]){seenGroups[gid]=true;groupOrder.push(gid);groupInds[gid]=[];}
-        groupInds[gid].push(JSON.parse(JSON.stringify(item)));
+      // 建立 id → {ind, group} 的查找表
+      var indMap = {};
+      GROUPS.forEach(function(g){
+        if(isNM && g.type!=="non-medical") return;
+        if(!isNM && g.type!=="medical") return;
+        g.indicators.forEach(function(ind){
+          if(ids.indexOf(ind.id)>-1) indMap[ind.id]={ind:ind,group:g};
+        });
       });
 
-      // 建立 filtered（只含本次勾選的指標，順序依勾選）
+      // 依勾選順序組裝各群組，嚴格只含本次勾選的指標
+      var seenGroups={}, groupOrder=[], groupInds={};
+      order.forEach(function(id){
+        var entry=indMap[id]; if(!entry) return;
+        var gid=entry.group.id;
+        if(!seenGroups[gid]){seenGroups[gid]=true;groupOrder.push(gid);groupInds[gid]=[];}
+        // backfill threshold fields from defaults
+        var ind=entry.ind;
+        var def=_defThreshMap[ind.id];
+        if(def){
+          var merged=JSON.parse(JSON.stringify(ind));
+          for(var y=112;y<=200;y++){
+            var tf='t'+y;
+            if((!merged[tf]||!String(merged[tf]).trim()) && def[tf] && String(def[tf]).trim()) merged[tf]=def[tf];
+          }
+          groupInds[gid].push(merged);
+        } else {
+          groupInds[gid].push(JSON.parse(JSON.stringify(ind)));
+        }
+      });
+
+      // 最終 filtered：群組順序依勾選，每群組的指標也依勾選順序
       var filtered=[];
       groupOrder.forEach(function(gid){
         var g=GROUPS.find(function(x){return x.id===gid;}); if(!g) return;
         var gc=JSON.parse(JSON.stringify(g));
         gc.indicators=groupInds[gid];
         gc.total=gc.indicators.length;
-        // backfill threshold defaults
-        var _defThreshMap=window._DEFAULT_GROUPS_THRESH||{};
-        gc.indicators=gc.indicators.map(function(ind){
-          var def=_defThreshMap[ind.id];
-          if(!def) return ind;
-          var merged=JSON.parse(JSON.stringify(ind));
-          for(var y=112;y<=200;y++){
-            var tf="t"+y;
-            if((!merged[tf]||!String(merged[tf]).trim())&&def[tf]&&String(def[tf]).trim()) merged[tf]=def[tf];
-          }
-          return merged;
-        });
         filtered.push(gc);
       });
+
+      if(!filtered.length){st.textContent="❌ 無對應指標";st.style.color="#C0392B";return;}
+
+      // 驗證：filtered 中指標總數必須等於 order.length
+      var totalInjected=0;
+      filtered.forEach(function(g){totalInjected+=g.indicators.length;});
+      if(totalInjected !== order.length){
+        console.warn("指標數不符：order="+order.length+" injected="+totalInjected);
+      }
 
       // Decode survey template
       var html=_dec(isNM?_S1:_S2);
 
-      // Inject ONLY filtered into GROUPS slot
+      // Inject filtered (only selected indicators, in order) into GROUPS slot
       var gStart=html.indexOf("const GROUPS = [");
       if(gStart>-1){
-        var depth2=0,pos2=gStart+15,endPos=-1;
-        while(pos2<html.length){
-          if(html[pos2]==="[") depth2++;
-          else if(html[pos2]==="]"){depth2--;if(depth2===0){endPos=pos2;break;}}
-          pos2++;
+        var depth=0; var pos=gStart+15;
+        while(pos<html.length){
+          if(html[pos]==="[") depth++;
+          else if(html[pos]==="]"){ depth--; if(depth===0){ break; } }
+          pos++;
         }
-        var gEnd=html.indexOf(";",endPos)+1;
+        var gEnd=html.indexOf(";",pos)+1;
         html=html.substring(0,gStart)+"const GROUPS = "+JSON.stringify(filtered)+";"+html.substring(gEnd);
       }
 
@@ -658,6 +653,14 @@ function mkHTML(member,selectedIndicators,meetingLinksArg){
           var url=meetingLinks[gid];
           if(!url&&!isNMGroup) url=resolveCancerLink(ind.cancer,meetingLinks);
           if(url) _ml[ind.id]=url;
+        });
+      });
+      filtered.forEach(function(g){
+        var gid=String(g.id||"").toLowerCase().trim();
+        var isNMGroup=gid.indexOf("q")===0;
+        g.indicators.forEach(function(ind){
+          var url=meetingLinks[gid];
+          if(!url&&!isNMGroup) url=resolveCancerLink(ind.cancer,meetingLinks);
           ind.meetingUrl=url||"";
         });
       });
@@ -672,14 +675,12 @@ function mkHTML(member,selectedIndicators,meetingLinksArg){
       );
 
       html=html.replace("var _bakedGroups = null; // filled by exportSurveyFile()",
-        "var _presetMember='"+member.replace(/'/g,"\\'")+  "';var _bakedGroups = "+JSON.stringify(filtered)+";");
+        "var _presetMember='"+member.replace(/'/g,"\\'")+"';var _bakedGroups = "+JSON.stringify(filtered)+";");
 
-      // Filename with timestamp to avoid GitHub Pages cache
-      var now=new Date();
-      var dt=now.toISOString().slice(0,10).replace(/-/g,"");
-      var ts=String(now.getTime()).slice(-6);
+      // Download / GitHub upload
+      var dt=new Date().toISOString().slice(0,10).replace(/-/g,"");
       var safeName=member.replace(/[^a-zA-Z0-9]/g,function(ch){return encodeURIComponent(ch).replace(/%/g,'');}).substring(0,20)||"member";
-      var fname="survey_"+safeName+"_"+dt+"_"+ts+".html";
+      var fname="survey_"+safeName+"_"+dt+".html";
 
       if(GH.token&&GH.repo){
         st.textContent="⏳ 上傳中…";
@@ -690,31 +691,28 @@ function mkHTML(member,selectedIndicators,meetingLinksArg){
             try{navigator.clipboard.writeText(url);}catch(e){}
             asgn["__link_"+member]=url;
             localStorage.setItem("adm_asgn",JSON.stringify(asgn));
-            _reenableGenBtn();
-            resetCurrentDispatch();
+            resetCurrentDispatch(); // 成功後歸零
           },
           function(err){
-            st.textContent="⚠️ 上傳失敗："+err+"（已自動下載檔案）";
-            st.style.color="#C0392B";
             var blob=new Blob([html],{type:"text/html;charset=utf-8"});
             var a=document.createElement("a");
-            a.href=URL.createObjectURL(blob);a.download=fname;
-            document.body.appendChild(a);a.click();document.body.removeChild(a);
+            a.href=URL.createObjectURL(blob); a.download=fname;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
             setTimeout(function(){URL.revokeObjectURL(a.href);},5000);
-            _reenableGenBtn();
-            resetCurrentDispatch();
+            st.textContent="⚠️ 上傳失敗("+err+")，已下載檔案";
+            st.style.color="#C8963E";
+            resetCurrentDispatch(); // 失敗 fallback 也歸零
           }
         );
       } else {
         var blob=new Blob([html],{type:"text/html;charset=utf-8"});
         var a=document.createElement("a");
-        a.href=URL.createObjectURL(blob);a.download=fname;
-        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        a.href=URL.createObjectURL(blob); a.download=fname;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(function(){URL.revokeObjectURL(a.href);},5000);
         st.innerHTML='✅ 已下載（設定 GitHub Token 可改為直接產生連結）';
         st.style.color="#1E7C5A";
-        _reenableGenBtn();
-        resetCurrentDispatch();
+        resetCurrentDispatch(); // 下載後歸零
         setTimeout(function(){
           var s=document.getElementById("gs");
           if(s&&s.textContent.indexOf("✅ 已下載")===0) s.textContent="";
@@ -723,28 +721,13 @@ function mkHTML(member,selectedIndicators,meetingLinksArg){
     }catch(err){
       st.textContent="❌ "+err.message;
       st.style.color="#C0392B";
-      _reenableGenBtn();
       console.error(err);
     }
   },100);
 }
 function reDL(member){
   var ids=Object.keys(asgn).filter(function(k){return asgn[k]===member&&k.indexOf("__link_")!==0;});
-  if(!ids.length) return;
-  var _ml=Object.assign({},MEETING_LINKS);
-  try{Object.assign(_ml,JSON.parse(localStorage.getItem("meetingLinks")||"{}"));}catch(e){}
-  var selInds=[];
-  ids.forEach(function(id){
-    for(var gi=0;gi<GROUPS.length;gi++){
-      var g=GROUPS[gi];
-      var item=g.indicators.find(function(x){return x.id===id;});
-      if(item){
-        selInds.push(Object.assign({},item,{groupId:g.id,groupName:g.name,groupType:g.type,meetingUrl:_ml[g.id]||""}));
-        break;
-      }
-    }
-  });
-  if(selInds.length) mkHTML(member,selInds,_ml);
+  if(ids.length) mkHTML(member,ids,undefined,ids);
 }
 function clrAll(){
   if(confirm("確定清除所有派送記錄？")){
@@ -982,34 +965,10 @@ function saveMeetingLinks() {
 // ── GitHub Auto Upload ──
 var GH = {};
 try { GH = JSON.parse(localStorage.getItem("gh_settings")||"{}"); } catch(e){}
-// 立即清理 GH.repo，修復舊版存入的髒資料（含 /surveys/xxx.html 的值）
-(function(){
-  if (!GH.repo) return;
-  var r = GH.repo.replace(/^https?:\/\/github\.com\//, "")
-                 .replace(/\/surveys\/.*$/, "")
-                 .replace(/\.html$/, "")
-                 .replace(/\/$/, "").trim();
-  var rp = r.split("/");
-  var clean = (rp.length >= 2 && rp[0] && rp[1]) ? rp[0]+"/"+rp[1] : r;
-  if (clean !== GH.repo) {
-    GH.repo = clean;
-    try { localStorage.setItem("gh_settings", JSON.stringify(GH)); } catch(e){}
-  }
-})();
 
 function saveGHSettings() {
   GH.token = document.getElementById("gh-token").value.trim();
-  var rawRepo = document.getElementById("gh-repo").value.trim();
-  // 儲存前清理 repo，只保留 owner/repo 格式
-  rawRepo = rawRepo.replace(/^https?:\/\/github\.com\//, "")
-                   .replace(/\/surveys\/.*$/, "")
-                   .replace(/\.html$/, "")
-                   .replace(/\/$/, "")
-                   .trim();
-  var rp = rawRepo.split("/");
-  GH.repo = (rp.length >= 2 && rp[0] && rp[1]) ? rp[0]+"/"+rp[1] : rawRepo;
-  // 同步回 input 顯示清理後的值
-  document.getElementById("gh-repo").value = GH.repo;
+  GH.repo  = document.getElementById("gh-repo").value.trim();
   localStorage.setItem("gh_settings", JSON.stringify(GH));
   var st = document.getElementById("gh-status");
   if (GH.token && GH.repo) {
@@ -1022,17 +981,7 @@ function saveGHSettings() {
 
 function loadGHSettings() {
   if (GH.token) document.getElementById("gh-token").value = GH.token;
-  if (GH.repo) {
-    // 載入時也清理，修復舊版存入的髒資料
-    var r = GH.repo.replace(/^https?:\/\/github\.com\//, "")
-                   .replace(/\/surveys\/.*$/, "")
-                   .replace(/\.html$/, "")
-                   .replace(/\/$/, "").trim();
-    var rp = r.split("/");
-    GH.repo = (rp.length >= 2 && rp[0] && rp[1]) ? rp[0]+"/"+rp[1] : r;
-    document.getElementById("gh-repo").value = GH.repo;
-    localStorage.setItem("gh_settings", JSON.stringify(GH));
-  }
+  if (GH.repo)  document.getElementById("gh-repo").value  = GH.repo;
 }
 
 function safeBase64Encode(str) {
@@ -1057,90 +1006,76 @@ function safeBase64Encode(str) {
 }
 
 function ghUpload(filename, htmlContent, onSuccess, onFail) {
-  var token = GH.token || (document.getElementById("gh-token") ? document.getElementById("gh-token").value.trim() : "");
-  var repo  = GH.repo  || (document.getElementById("gh-repo")  ? document.getElementById("gh-repo").value.trim()  : "");
-  if (!token || !repo) { onFail("未設定 GitHub Token 或 Repo"); return; }
+  if (!GH.token || !GH.repo) { onFail("未設定 GitHub Token 或 Repo"); return; }
 
-  repo = repo.replace(/^https?:\/\/github\.com\//, "")
-             .replace(/\/surveys\/.*$/, "")
-             .replace(/\.html$/, "")
-             .replace(/\/$/, "")
-             .trim();
+  // 清理 GH.repo，防止髒值混入 URL
+  var repo = GH.repo
+    .replace(/^https?:\/\/github\.com\//, "")
+    .replace(/\/surveys\/.*$/, "")
+    .replace(/\.html$/, "")
+    .replace(/\/$/, "")
+    .trim();
   var parts = repo.split("/");
   if (parts.length < 2 || !parts[0] || !parts[1]) {
-    onFail("Repo 格式錯誤（目前值：" + repo + "）"); return;
+    onFail("Repo 格式錯誤，請填 owner/repo"); return;
   }
   repo = parts[0] + "/" + parts[1];
 
   var encoded;
   try { encoded = safeBase64Encode(htmlContent); }
-  catch (e) { onFail("Base64 編碼失敗: " + e.message); return; }
+  catch(e) { onFail("Base64 編碼失敗: " + e.message); return; }
 
-  var hdrs = {
-    "Authorization": "Bearer " + token,
-    "Accept": "application/vnd.github+json",
-    "Content-Type": "application/json",
-    "X-GitHub-Api-Version": "2022-11-28"
-  };
   var repoApi  = "https://api.github.com/repos/" + repo;
   var path     = "surveys/" + filename;
   var apiUrl   = repoApi + "/contents/" + path;
   var pagesUrl = "https://" + parts[0] + ".github.io/" + parts[1] + "/" + path;
+  var hdrs = {
+    "Authorization": "Bearer " + GH.token,
+    "Accept":        "application/vnd.github+json",
+    "Content-Type":  "application/json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
   var defaultBranch = "main";
-  var st = document.getElementById("gs");
 
   var done = false;
-  var timer = setTimeout(function() {
-    if (!done) { done = true; onFail("上傳逾時（30秒），請確認 Token 有效且有 repo 寫入權限"); }
+  var timer = setTimeout(function(){
+    if(!done){ done=true; onFail("上傳逾時（90秒），請重試"); }
   }, 90000);
-  function finish(fn, arg) {
-    if (done) return;
-    done = true;
-    clearTimeout(timer);
-    fn(arg);
-  }
-  function setStatus(msg) {
-    if (st) { st.textContent = msg; st.style.color = "#C8963E"; }
-  }
-
-  function safeJson(r) {
-    return r.text().then(function(txt) {
-      try { return { ok: r.ok, status: r.status, body: JSON.parse(txt) }; }
-      catch(e) { return { ok: r.ok, status: r.status, body: { message: txt.substring(0, 300) } }; }
-    });
-  }
+  function finish(fn, arg){ if(done)return; done=true; clearTimeout(timer); fn(arg); }
 
   // Step 1: get default_branch
-  setStatus("⏳ 步驟1/3：讀取 Repo 設定…");
   fetch(repoApi, { headers: hdrs })
-    .then(safeJson)
-    .then(function(res) {
-      if (!res.ok) throw new Error("Repo 讀取失敗 " + res.status + ": " + (res.body.message || "請確認 Repo 名稱和 Token 是否正確"));
-      defaultBranch = res.body.default_branch || "main";
-      // Step 2: check if file exists (404 = new file, normal)
-      setStatus("⏳ 步驟2/3：確認檔案狀態（branch: " + defaultBranch + "）…");
-      return fetch(apiUrl + "?ref=" + encodeURIComponent(defaultBranch), { headers: hdrs }).then(safeJson);
-    })
-    .then(function(res) {
-      var existing = (res.status === 404) ? null : res.body;
-      if (res.status !== 404 && !res.ok) throw new Error("檔案查詢失敗 " + res.status + ": " + (res.body.message || ""));
-      // Step 3: PUT
-      setStatus("⏳ 步驟3/3：上傳問卷…");
-      var body = { message: "Create survey: " + filename, content: encoded, branch: defaultBranch };
-      if (existing && existing.sha) body.sha = existing.sha;
-      return fetch(apiUrl, { method: "PUT", headers: hdrs, body: JSON.stringify(body) }).then(safeJson);
-    })
-    .then(function(res) {
-      if (!res.ok) throw new Error("上傳失敗 " + res.status + ": " + (res.body.message || JSON.stringify(res.body).substring(0, 200)));
-      if (res.body && res.body.content) {
-        finish(onSuccess, pagesUrl);
-      } else {
-        finish(onFail, "GitHub 回應異常：" + JSON.stringify(res.body).substring(0, 200));
-      }
-    })
-    .catch(function(e) {
-      finish(onFail, e.message);
+  .then(function(r){ return r.text().then(function(t){
+    try{ var j=JSON.parse(t);
+      if(!r.ok) throw new Error("Repo讀取失敗 "+r.status+": "+(j.message||""));
+      defaultBranch = j.default_branch || "main";
+    }catch(e){ if(!r.ok) throw e; }
+    // Step 2: check sha
+    return fetch(apiUrl+"?ref="+defaultBranch, { headers: hdrs });
+  }); })
+  .then(function(r){
+    if(r.status===401) throw new Error("Token 無效或已過期");
+    if(r.status===403) throw new Error("Token 權限不足");
+    if(r.status===404) return null;
+    return r.json();
+  })
+  .then(function(existing){
+    var body = { message:"Create survey: "+filename, content:encoded, branch:defaultBranch };
+    if(existing && existing.sha) body.sha = existing.sha;
+    return fetch(apiUrl, { method:"PUT", headers:hdrs, body:JSON.stringify(body) });
+  })
+  .then(function(r){
+    return r.text().then(function(t){
+      var j; try{ j=JSON.parse(t); }catch(e){ j={}; }
+      if(!r.ok) throw new Error("上傳失敗 "+r.status+": "+(j.message||t.substring(0,100)));
+      return j;
     });
+  })
+  .then(function(result){
+    if(result && result.content){ finish(onSuccess, pagesUrl); }
+    else{ finish(onFail, "GitHub回應異常: "+JSON.stringify(result).substring(0,100)); }
+  })
+  .catch(function(e){ finish(onFail, e.message); });
 }
 
 function procSheet(wb,sn){
