@@ -547,6 +547,10 @@ function doGen(){
   var member=document.getElementById("sel-m").value;
   if(!member){alert("請選擇委員");return;}
 
+  // 防止連續點擊造成 409
+  var _genBtn=document.querySelector("button[onclick='doGen()']");
+  if(_genBtn){_genBtn.disabled=true;_genBtn.textContent="⏳ 產生中…";}
+
   // 唯一來源：目前畫面上實際 checked 的 checkbox
   var checkedBoxes=Array.from(
     document.querySelectorAll("input[type='checkbox'][data-indicator-id]:checked")
@@ -582,6 +586,10 @@ function doGen(){
   localStorage.setItem("adm_asgn",JSON.stringify(asgn));
 
   mkHTML(member,selectedIndicators,meetingLinks);
+}
+function _reenableGenBtn(){
+  var b=document.querySelector("button[onclick='doGen()']");
+  if(b){b.disabled=false;b.textContent="📤 產生問卷";}
 }
 function mkHTML(member,selectedIndicators,meetingLinksArg){
   var st=document.getElementById("gs");
@@ -682,6 +690,7 @@ function mkHTML(member,selectedIndicators,meetingLinksArg){
             try{navigator.clipboard.writeText(url);}catch(e){}
             asgn["__link_"+member]=url;
             localStorage.setItem("adm_asgn",JSON.stringify(asgn));
+            _reenableGenBtn();
             resetCurrentDispatch();
           },
           function(err){
@@ -692,6 +701,7 @@ function mkHTML(member,selectedIndicators,meetingLinksArg){
             setTimeout(function(){URL.revokeObjectURL(a.href);},5000);
             st.textContent="⚠️ 上傳失敗("+err+")，已下載檔案";
             st.style.color="#C8963E";
+            _reenableGenBtn();
             resetCurrentDispatch();
           }
         );
@@ -703,6 +713,7 @@ function mkHTML(member,selectedIndicators,meetingLinksArg){
         setTimeout(function(){URL.revokeObjectURL(a.href);},5000);
         st.innerHTML='✅ 已下載（設定 GitHub Token 可改為直接產生連結）';
         st.style.color="#1E7C5A";
+        _reenableGenBtn();
         resetCurrentDispatch();
         setTimeout(function(){
           var s=document.getElementById("gs");
@@ -712,6 +723,7 @@ function mkHTML(member,selectedIndicators,meetingLinksArg){
     }catch(err){
       st.textContent="❌ "+err.message;
       st.style.color="#C0392B";
+      _reenableGenBtn();
       console.error(err);
     }
   },100);
@@ -1011,45 +1023,73 @@ function safeBase64Encode(str) {
 }
 
 function ghUpload(filename, htmlContent, onSuccess, onFail) {
-  if (!GH.token || !GH.repo) { onFail("未設定 GitHub Token 或 Repo"); return; }
+  var token = GH.token || (document.getElementById("gh-token") ? document.getElementById("gh-token").value.trim() : "");
+  var repo  = GH.repo  || (document.getElementById("gh-repo")  ? document.getElementById("gh-repo").value.trim()  : "");
+  if (!token || !repo) { onFail("未設定 GitHub Token 或 Repo"); return; }
+
+  repo = repo.replace(/^https:\/\/github\.com\//, "").replace(/\/$/, "");
+  var parts = repo.split("/");
+  if (parts.length !== 2) { onFail("Repo 格式錯誤，請填 owner/repo，例如 cancercenter-star/cancer"); return; }
 
   var encoded;
-  try {
-    encoded = safeBase64Encode(htmlContent);
-  } catch(e) { onFail("Base64 編碼失敗: " + e.message); return; }
+  try { encoded = safeBase64Encode(htmlContent); }
+  catch (e) { onFail("Base64 編碼失敗: " + e.message); return; }
 
-  var apiUrl   = "https://api.github.com/repos/" + GH.repo + "/contents/surveys/" + filename;
-  var pagesUrl = "https://" + GH.repo.split("/")[0] + ".github.io/" + GH.repo.split("/")[1] + "/surveys/" + filename;
   var hdrs = {
-    "Authorization": "Bearer " + GH.token,
-    "Accept":        "application/vnd.github+json",
-    "Content-Type":  "application/json",
+    "Authorization": "Bearer " + token,
+    "Accept": "application/vnd.github+json",
+    "Content-Type": "application/json",
     "X-GitHub-Api-Version": "2022-11-28"
   };
+  var repoApi  = "https://api.github.com/repos/" + repo;
+  var path     = "surveys/" + filename;
+  var apiUrl   = repoApi + "/contents/" + path;
+  var pagesUrl = "https://" + parts[0] + ".github.io/" + parts[1] + "/" + path;
+  var defaultBranch = "main";
 
-  fetch(apiUrl, { headers: hdrs })
-  .then(function(r) {
-    if (r.status === 401) throw new Error("Token 無效或已過期，請重新產生");
-    if (r.status === 403) throw new Error("Token 權限不足，請勾選 repo 權限");
-    if (r.status === 404) return null;
-    return r.json();
-  })
-  .then(function(existing) {
-    var body = { message: "Create survey: " + filename, content: encoded, branch: "main" };
-    if (existing && existing.sha) body.sha = existing.sha;
-    return fetch(apiUrl, { method: "PUT", headers: hdrs, body: JSON.stringify(body) });
-  })
-  .then(function(r) {
-    return r.json().then(function(j) {
-      if (!r.ok) throw new Error("GitHub API " + r.status + ": " + (j.message || JSON.stringify(j).substring(0,80)));
-      return j;
-    });
-  })
-  .then(function(result) {
-    if (result.content) { onSuccess(pagesUrl); }
-    else { onFail("回應異常: " + JSON.stringify(result).substring(0,100)); }
-  })
-  .catch(function(e) { onFail(e.message); });
+  // Step 1: get default_branch from repo API
+  fetch(repoApi, { headers: hdrs })
+    .then(function(r) {
+      return r.json().then(function(j) {
+        if (!r.ok) throw new Error("讀取 Repo 失敗 GitHub API " + r.status + ": " + (j.message || ""));
+        defaultBranch = j.default_branch || "main";
+        // Step 2: GET existing file to check sha
+        return fetch(apiUrl + "?ref=" + encodeURIComponent(defaultBranch), { headers: hdrs });
+      });
+    })
+    .then(function(r) {
+      // 404 = new file, no sha needed
+      if (r.status === 404) return null;
+      return r.json().then(function(j) {
+        if (!r.ok) throw new Error("讀取檔案失敗 GitHub API " + r.status + ": " + (j.message || ""));
+        return j;
+      });
+    })
+    .then(function(existing) {
+      // Step 3: PUT file — include sha only if file already exists
+      var body = {
+        message: "Create survey: " + filename,
+        content: encoded,
+        branch: defaultBranch
+      };
+      if (existing && existing.sha) body.sha = existing.sha;
+      return fetch(apiUrl, {
+        method: "PUT",
+        headers: hdrs,
+        body: JSON.stringify(body)
+      });
+    })
+    .then(function(r) {
+      return r.json().then(function(j) {
+        if (!r.ok) throw new Error("上傳失敗 GitHub API " + r.status + ": " + (j.message || JSON.stringify(j).substring(0, 120)));
+        return j;
+      });
+    })
+    .then(function(result) {
+      if (result && result.content) { onSuccess(pagesUrl); }
+      else { onFail("GitHub 回應異常，未取得 content"); }
+    })
+    .catch(function(e) { onFail(e.message); });
 }
 
 function procSheet(wb,sn){
