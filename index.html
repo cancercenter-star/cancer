@@ -694,13 +694,13 @@ function mkHTML(member,selectedIndicators,meetingLinksArg){
             resetCurrentDispatch();
           },
           function(err){
+            st.textContent="⚠️ 上傳失敗："+err+"（已自動下載檔案）";
+            st.style.color="#C0392B";
             var blob=new Blob([html],{type:"text/html;charset=utf-8"});
             var a=document.createElement("a");
             a.href=URL.createObjectURL(blob);a.download=fname;
             document.body.appendChild(a);a.click();document.body.removeChild(a);
             setTimeout(function(){URL.revokeObjectURL(a.href);},5000);
-            st.textContent="⚠️ 上傳失敗("+err+")，已下載檔案";
-            st.style.color="#C8963E";
             _reenableGenBtn();
             resetCurrentDispatch();
           }
@@ -1092,7 +1092,7 @@ function ghUpload(filename, htmlContent, onSuccess, onFail) {
   var done = false;
   var timer = setTimeout(function() {
     if (!done) { done = true; onFail("上傳逾時（30秒），請確認 Token 有效且有 repo 寫入權限"); }
-  }, 30000);
+  }, 90000);
   function finish(fn, arg) {
     if (done) return;
     done = true;
